@@ -36,7 +36,7 @@ After rebooting, clone this repository and run the installation script.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-repo-path/WAVEGO.git
+git clone https://github.com/Devilwitha/robo.git
 cd WAVEGO
 
 # Make the installation script executable
@@ -68,9 +68,8 @@ After installation and reboot, the WAVEGO software will start automatically.
 
 2.  **Access the Web Interface**: On a computer, phone, or tablet connected to the **same network**, open a web browser and navigate to:
     ```
-    http://<YOUR_PI_IP_ADDRESS>:5000
+    http://192.168.178.52:5000
     ```
-    (Replace `<YOUR_PI_IP_ADDRESS>` with the address from the previous step).
 
 You should now see the WAVEGO control interface with a live camera feed.
 
