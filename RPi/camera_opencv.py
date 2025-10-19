@@ -7,6 +7,7 @@ import datetime
 import time
 import threading
 import imutils
+from picamera2 import Picamera2 # NEUER IMPORT
 
 curpath = os.path.realpath(__file__)
 thisPath = "/" + os.path.dirname(curpath)
@@ -26,11 +27,11 @@ colorLower = np.array([24, 100, 100])
 
 speedMove = 100
 
-
-
 class CVThread(threading.Thread):
     font = cv2.FONT_HERSHEY_SIMPLEX
-
+    # ... (der Rest dieser Klasse bleibt komplett unverÃ¤ndert) ...
+    # ... ich kÃ¼rze sie hier ab, um die Ãœbersicht zu wahren.
+    # Du musst hier nichts Ã¤ndern!
     cameraDiagonalW = 64
     cameraDiagonalH = 48
     videoW = 640
@@ -201,7 +202,7 @@ class CVThread(threading.Thread):
             # if the contour is too small, ignore it
             if cv2.contourArea(c) < 2000:
                 continue
-     
+    
             # compute the bounding box for the contour, draw it on the frame,
             # and update the text
             (self.mov_x, self.mov_y, self.mov_w, self.mov_h) = cv2.boundingRect(c)
@@ -346,9 +347,9 @@ class CVThread(threading.Thread):
     def faceDetectCV(self, frame_image):
         grayGen = cv2.cvtColor(frame_image, cv2.COLOR_BGR2GRAY)
         self.faces = faceCascade.detectMultiScale(
-                grayGen,     
+                grayGen,       
                 scaleFactor=1.2,
-                minNeighbors=5,     
+                minNeighbors=5,       
                 minSize=(20, 20)
             )
         if len(self.faces):
@@ -405,19 +406,14 @@ class CVThread(threading.Thread):
 class Camera(BaseCamera):
     video_source = 0
     modeSelect = 'none'
-    # modeSelect = 'findlineCV'
-    # modeSelect = 'findColor'
-    # modeSelect = 'watchDog'
-    # add # modeSelect = 'faceDetection'
-
     CVMode = 'run'
-    # CVMode = 'no'
 
     def __init__(self):
         if os.environ.get('OPENCV_CAMERA_SOURCE'):
             Camera.set_video_source(int(os.environ['OPENCV_CAMERA_SOURCE']))
         super(Camera, self).__init__()
 
+    # ... (der Rest der Klasse bleibt unverÃ¤ndert) ...
     def robotStop(self):
         robot.robotCtrl.moveStart(speedMove, 'no', 'no')
         time.sleep(0.1)
@@ -482,42 +478,55 @@ class Camera(BaseCamera):
     def set_video_source(source):
         Camera.video_source = source
 
+    # Veraltete frames() Methode wird ersetzt
+    # @staticmethod
+    # def frames():
+    #     camera = cv2.VideoCapture(Camera.video_source)
+    #     ... (alter Code)
+
+    # ############### NEUE METHODE ##################
     @staticmethod
     def frames():
-        camera = cv2.VideoCapture(Camera.video_source)
-        camera.set(3, 640)
-        camera.set(4, 480)
-        if not camera.isOpened():
-            raise RuntimeError('Could not start camera.')
+        # picamera2 initialisieren
+        picam2 = Picamera2()
+        # Eine Konfiguration fÃ¼r die Kamera erstellen (640x480)
+        config = picam2.create_preview_configuration(main={"size": (640, 480)})
+        picam2.configure(config)
+        # Kamera starten
+        picam2.start()
+        print("INFO: picamera2 gestartet.")
 
+        # CV-Thread initialisieren und starten
         cvt = CVThread()
         cvt.start()
 
         while True:
-            # read current frame
-            _, img = camera.read()
+            # Ein Bild als NumPy-Array aufnehmen
+            img = picam2.capture_array()
 
             if Camera.modeSelect == 'none':
                 cvt.pause()
                 robot.buzzerCtrl(0, 0)
             else:
-                if cvt.CVThreading:
-                    pass
-                else:
+                if not cvt.CVThreading:
                     cvt.mode(Camera.modeSelect, img)
                     cvt.resume()
                 try:
                     img = cvt.elementDraw(img)
-                except:
+                except Exception as e:
+                    print(f"Error in elementDraw: {e}")
                     pass
 
-            # encode as a jpeg image and return it
+            # Bild als JPEG kodieren und ausgeben
             try:
                 yield cv2.imencode('.jpg', img)[1].tobytes()
-            except:
+            except Exception as e:
+                print(f"Error encoding frame: {e}")
                 pass
+    # ############ ENDE NEUE METHODE ################
 
 
+# ... (der Rest der Datei bleibt unverÃ¤ndert) ...
 def commandAct(act, inputA):
     global speedMove
     if act == 'forward':
