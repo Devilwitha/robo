@@ -1,0 +1,16 @@
+[Unit]
+Description=WAVEGO Web Server
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+ExecStartPre=/bin/sleep 10
+ExecStart=/home/devil/WAVEGO/RPi/venv/bin/python /home/devil/WAVEGO/RPi/webServer.py
+WorkingDirectory=/home/devil/WAVEGO/RPi
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
