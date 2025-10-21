@@ -8,6 +8,7 @@ import time
 import threading
 import imutils
 from picamera2 import Picamera2 # NEUER IMPORT
+import BollshiiOs
 
 curpath = os.path.realpath(__file__)
 thisPath = "/" + os.path.dirname(curpath)
@@ -568,6 +569,10 @@ def commandAct(act, inputA):
         robot.steadyMode()
     elif act == 'steadyOff':
         robot.steadyMode()
+    elif act == 'bolliOs':
+        BollshiiOs.start_gyro_balance()
+    elif act == 'bolliOsOff':
+        BollshiiOs.stop_gyro_balance()
 
     # openCV ctrl.
     elif act == 'faceDetection':

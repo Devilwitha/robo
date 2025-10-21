@@ -12,6 +12,7 @@ import info
 import asyncio
 import websockets
 import app
+import BollshiiOs
 
 # Globale Variable fÃ¼r die Flask-App und IP
 flask_app = None
@@ -77,7 +78,7 @@ async def recv_msg(websocket):
             # Verarbeitet Befehle, die als einfacher String gesendet werden
             if isinstance(data, str):
                 # Leitet fast alle String-Befehle direkt an die Roboter-Steuerung weiter
-                if data not in ['get_info', 'scan']:
+                if data not in ['get_info', 'scan', 'bolliOs', 'bolliOsOff']:
                     flask_app.commandInput(data)
 
                 if data == 'get_info':
@@ -86,6 +87,16 @@ async def recv_msg(websocket):
                 
                 elif data == 'findColor':
                     flask_app.modeselect('findColor')
+                
+                elif data == 'bolliOs':
+                    BollshiiOs.start_gyro_balance()
+                    response['title'] = 'bolliOs'
+                    response['data'] = 'activated'
+                
+                elif data == 'bolliOsOff':
+                    BollshiiOs.stop_gyro_balance()
+                    response['title'] = 'bolliOs'
+                    response['data'] = 'deactivated'
                 
                 elif data == 'scan':
                     radar_send = [[3,60],[10,70],[10,80],[10,90],[10,100],[10,110],[3,120]]
