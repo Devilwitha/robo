@@ -44,6 +44,7 @@ extern int moveFB = 0;
 extern int moveLR = 0;
 extern int debugMode = 0;
 extern int funcMode  = 0;
+extern int robotSpeed = 100;  // Movement speed control (1-100)
 float gestureUD = 0;
 float gestureLR = 0;
 float gestureOffSetMax = 15;
@@ -143,6 +144,28 @@ void serialCtrl(){
           case 1: digitalWrite(BUZZER, LOW);break;
         }
       }
+
+      else if(docReceive["var"] == "speed"){
+        // Speed control implementation
+        robotSpeed = val;
+        if(robotSpeed < 1) robotSpeed = 1;
+        if(robotSpeed > 100) robotSpeed = 100;
+        
+        Serial.print("Speed set to: ");
+        Serial.println(robotSpeed);
+        
+        // Adjust STEP_ITERATE based on speed (1-100)
+        // Speed 1 = very slow, Speed 100 = fastest
+        float baseStepIterate = 0.04;  // Default step iterate
+        float speedMultiplier = (float)robotSpeed / 100.0;  // 0.01 to 1.0
+        STEP_ITERATE = baseStepIterate * speedMultiplier;
+        
+        // Ensure minimum speed
+        if(STEP_ITERATE < 0.005) STEP_ITERATE = 0.005;
+        
+        Serial.print("STEP_ITERATE adjusted to: ");
+        Serial.println(STEP_ITERATE);
+      }
     }
 
 
@@ -162,6 +185,7 @@ void serialCtrl(){
 void jsonSend(){
   if(millis() - LAST_JSON_SEND > JSON_SEND_INTERVAL || millis() < LAST_JSON_SEND){
     docSend["vol"] = loadVoltage_V;
+    docSend["speed"] = robotSpeed;  // Send current speed back to Python
     serializeJson(docSend, Serial);
     LAST_JSON_SEND = millis();
   }

@@ -82,10 +82,13 @@ async def recv_msg(websocket):
             # Verarbeitet Befehle, die als einfacher String gesendet werden
             if isinstance(data, str):
                 # Leitet fast alle String-Befehle direkt an die Roboter-Steuerung weiter
-                if data not in ['get_info', 'scan', 'bolliOs', 'bolliOsOff']:
+                if data not in ['get_info', 'scan', 'bolliOs', 'bolliOsOff', 'motionTracking', 'motionTrackingOff']:
                     flask_app.commandInput(data)
                     if 'wsB' in data:
                         print(f"SPEED DEBUG: Command forwarded to flask_app.commandInput: {data}")
+                        # Send immediate acknowledgment for speed commands
+                        response['title'] = 'speedControl'
+                        response['data'] = f'speed_set_{data.replace("wsB", "").strip()}'
 
                 if data == 'get_info':
                     response['title'] = 'get_info'
@@ -104,6 +107,18 @@ async def recv_msg(websocket):
                     response['title'] = 'bolliOs'
                     response['data'] = 'deactivated'
                 
+                elif data == 'motionTracking':
+                    flask_app.commandInput('motionTracking')
+                    response['title'] = 'motionTracking'
+                    response['data'] = 'activated'
+                    print("MOTION TRACKING: Activated via WebSocket")
+                
+                elif data == 'motionTrackingOff':
+                    flask_app.commandInput('motionTrackingOff')
+                    response['title'] = 'motionTracking'
+                    response['data'] = 'deactivated'
+                    print("MOTION TRACKING: Deactivated via WebSocket")
+                
                 elif data == 'scan':
                     radar_send = [[3,60],[10,70],[10,80],[10,90],[10,100],[10,110],[3,120]]
                     response['title'] = 'scanResult'
@@ -121,6 +136,39 @@ async def recv_msg(websocket):
                     color = data.get('data')
                     if color and len(color) == 3:
                         flask_app.colorFindSet(color[0], color[1], color[2])
+                
+                elif data.get('action') == 'motionSettings':
+                    # Handle motion tracking settings
+                    settings_type = data.get('type')
+                    settings_data = data.get('data', {})
+                    
+                    try:
+                        if settings_type == 'applyPreset':
+                            preset_name = settings_data.get('preset', 'balanced')
+                            # Apply preset via MotionTracker
+                            flask_app.commandInput(f'motionPreset:{preset_name}')
+                            response['title'] = 'motionSettings'
+                            response['data'] = f'preset_{preset_name}_applied'
+                            print(f"MOTION SETTINGS: Applied preset {preset_name}")
+                        
+                        elif settings_type == 'updateSettings':
+                            # Update individual settings
+                            flask_app.commandInput(f'motionSettings:{json.dumps(settings_data)}')
+                            response['title'] = 'motionSettings'
+                            response['data'] = 'settings_updated'
+                            print(f"MOTION SETTINGS: Updated settings {settings_data}")
+                        
+                        elif settings_type == 'resetSettings':
+                            # Reset to defaults
+                            flask_app.commandInput('motionReset')
+                            response['title'] = 'motionSettings'
+                            response['data'] = 'settings_reset'
+                            print("MOTION SETTINGS: Reset to defaults")
+                        
+                    except Exception as e:
+                        print(f"MOTION SETTINGS ERROR: {e}")
+                        response['title'] = 'motionSettings'
+                        response['data'] = f'error_{str(e)}'
 
             response_json = json.dumps(response)
             await websocket.send(response_json)

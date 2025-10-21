@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAVEGO Motion Tracking Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .code {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 3px;
+            padding: 10px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 WAVEGO Motion Tracking Debug Tool</h1>
+    
+    <div class="debug-container">
+        <h2>Motion Tracking Switch Status</h2>
+        <div id="statusDisplay" class="status info">
+            Checking Motion Tracking availability...
+        </div>
+        
+        <h3>Debug Controls</h3>
+        <button onclick="checkMotionTracking()">Check Status</button>
+        <button onclick="forceIntegration()">Force Integration</button>
+        <button onclick="testWebSocket()">Test WebSocket</button>
+        <button onclick="toggleMotion()">Toggle Motion</button>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
+
+    <div class="debug-container">
+        <h2>Integration Status</h2>
+        <div id="integrationStatus"></div>
+    </div>
+
+    <div class="debug-container">
+        <h2>Manual Integration</h2>
+        <p>Falls der Switch nicht automatisch erscheint, können Sie ihn manuell hinzufügen:</p>
+        <button onclick="manualIntegration()">Manuell Hinzufügen</button>
+        
+        <h3>Console Commands</h3>
+        <div class="code">
+            // Manuell im Browser Console ausführen:<br>
+            motionTrackingDebug.integrate()  // Switch hinzufügen<br>
+            motionTrackingDebug.toggle()     // Ein/Ausschalten<br>
+            motionTrackingDebug.status()     // Status anzeigen
+        </div>
+    </div>
+
+    <div class="debug-container">
+        <h2>Console Output</h2>
+        <div id="consoleOutput" style="background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 5px; font-family: monospace; height: 300px; overflow-y: auto;">
+        </div>
+    </div>
+
+    <script>
+        let originalConsoleLog = console.log;
+        let originalConsoleError = console.error;
+        let originalConsoleWarn = console.warn;
+
+        // Intercept console output
+        function interceptConsole() {
+            console.log = function(...args) {
+                addToConsoleOutput('[LOG] ' + args.join(' '), '#00ff00');
+                originalConsoleLog.apply(console, args);
+            };
+            
+            console.error = function(...args) {
+                addToConsoleOutput('[ERROR] ' + args.join(' '), '#ff4444');
+                originalConsoleError.apply(console, args);
+            };
+            
+            console.warn = function(...args) {
+                addToConsoleOutput('[WARN] ' + args.join(' '), '#ffaa00');
+                originalConsoleWarn.apply(console, args);
+            };
+        }
+
+        function addToConsoleOutput(message, color = '#00ff00') {
+            const output = document.getElementById('consoleOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            output.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function checkMotionTracking() {
+            const statusDiv = document.getElementById('statusDisplay');
+            const integrationDiv = document.getElementById('integrationStatus');
+            
+            addToConsoleOutput('Checking Motion Tracking status...');
+            
+            try {
+                // Check if extension is loaded
+                if (typeof window.motionTrackingDebug !== 'undefined') {
+                    const status = window.motionTrackingDebug.status();
+                    statusDiv.innerHTML = `
+                        <div class="success">✅ Motion Tracking Extension gefunden!</div>
+                        <strong>Status:</strong><br>
+                        - Integriert: ${status.integrated ? '✅' : '❌'}<br>
+                        - Aktiv: ${status.active ? '✅' : '❌'}<br>
+                        - Versuche: ${status.attempts}
+                    `;
+                    
+                    integrationDiv.innerHTML = status.integrated ? 
+                        '<div class="success">✅ Switch ist in der Web-Oberfläche integriert</div>' :
+                        '<div class="warning">⚠️ Switch ist nicht sichtbar - versuche Integration</div>';
+                        
+                    addToConsoleOutput('Motion Tracking Status: ' + JSON.stringify(status));
+                } else {
+                    statusDiv.innerHTML = '<div class="error">❌ Motion Tracking Extension nicht gefunden</div>';
+                    integrationDiv.innerHTML = '<div class="error">Motion Tracking Script wurde nicht geladen</div>';
+                    addToConsoleOutput('Motion Tracking Extension nicht verfügbar');
+                }
+                
+                // Check for motion tracking container
+                const container = document.getElementById('motionTrackingContainer');
+                if (container) {
+                    addToConsoleOutput('Motion Tracking Container gefunden in DOM');
+                } else {
+                    addToConsoleOutput('Motion Tracking Container NICHT im DOM gefunden');
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ Fehler beim Status-Check: ${error.message}</div>`;
+                addToConsoleOutput('Fehler beim Status-Check: ' + error.message);
+            }
+        }
+
+        function forceIntegration() {
+            addToConsoleOutput('Forcing Motion Tracking integration...');
+            try {
+                if (window.motionTrackingDebug) {
+                    window.motionTrackingDebug.integrate();
+                    setTimeout(checkMotionTracking, 1000);
+                } else {
+                    addToConsoleOutput('Motion Tracking Debug interface not available');
+                }
+            } catch (error) {
+                addToConsoleOutput('Error forcing integration: ' + error.message);
+            }
+        }
+
+        function testWebSocket() {
+            addToConsoleOutput('Testing WebSocket connections...');
+            
+            const wsConnections = [
+                'window.websocket',
+                'window.ws', 
+                'window.socket',
+                'window.webSocket'
+            ];
+            
+            let found = false;
+            wsConnections.forEach(wsName => {
+                try {
+                    const ws = eval(wsName);
+                    if (ws && ws.readyState !== undefined) {
+                        const state = ws.readyState === WebSocket.OPEN ? 'OPEN' : 
+                                     ws.readyState === WebSocket.CONNECTING ? 'CONNECTING' :
+                                     ws.readyState === WebSocket.CLOSING ? 'CLOSING' : 'CLOSED';
+                        addToConsoleOutput(`${wsName}: ${state}`);
+                        found = true;
+                    }
+                } catch (e) {
+                    addToConsoleOutput(`${wsName}: Not found`);
+                }
+            });
+            
+            if (!found) {
+                addToConsoleOutput('No WebSocket connections found!');
+            }
+        }
+
+        function toggleMotion() {
+            addToConsoleOutput('Toggling Motion Tracking...');
+            try {
+                if (window.motionTrackingDebug) {
+                    window.motionTrackingDebug.toggle();
+                } else {
+                    addToConsoleOutput('Motion Tracking Debug interface not available');
+                }
+            } catch (error) {
+                addToConsoleOutput('Error toggling motion: ' + error.message);
+            }
+        }
+
+        function clearConsole() {
+            document.getElementById('consoleOutput').innerHTML = '';
+        }
+
+        function manualIntegration() {
+            addToConsoleOutput('Attempting manual integration...');
+            
+            // Create motion tracking switch manually
+            const app = document.getElementById('app') || document.body;
+            
+            const container = document.createElement('div');
+            container.id = 'motionTrackingContainer';
+            container.style.cssText = `
+                margin: 20px;
+                padding: 20px;
+                background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+                border: 2px solid #2196F3;
+                border-radius: 15px;
+                box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+                text-align: center;
+            `;
+            
+            container.innerHTML = `
+                <h3 style="color: #1565C0; margin-top: 0;">🎯 Motion Tracking</h3>
+                <p style="color: #424242; font-size: 13px;">🔕 Silent motion detection - follows movement without beeping</p>
+                <div style="margin: 15px 0;">
+                    <label style="margin-right: 10px; color: #1565C0; font-weight: 500;">Follow Motion</label>
+                    <input type="checkbox" id="manualMotionToggle" style="transform: scale(1.5);">
+                </div>
+                <div id="manualMotionStatus" style="padding: 8px; background: #f5f5f5; border-radius: 15px; color: #666;">
+                    🔘 Motion Tracking OFF
+                </div>
+            `;
+            
+            // Remove existing container if it exists
+            const existing = document.getElementById('motionTrackingContainer');
+            if (existing) existing.remove();
+            
+            app.appendChild(container);
+            
+            // Add manual event listener
+            document.getElementById('manualMotionToggle').addEventListener('change', function() {
+                const status = document.getElementById('manualMotionStatus');
+                const command = this.checked ? 'motionTracking' : 'motionTrackingOff';
+                
+                status.textContent = this.checked ? 
+                    '🔵 Motion Tracking ACTIVE - Blue LEDs ON' : 
+                    '🔘 Motion Tracking OFF';
+                
+                status.style.color = this.checked ? '#1565C0' : '#666';
+                status.style.background = this.checked ? '#E3F2FD' : '#f5f5f5';
+                
+                addToConsoleOutput(`Manual toggle: ${command}`);
+                
+                // Try to send WebSocket command
+                try {
+                    const ws = window.websocket || window.ws || window.socket;
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(command);
+                        addToConsoleOutput(`Sent WebSocket command: ${command}`);
+                    } else {
+                        addToConsoleOutput('No active WebSocket connection found');
+                    }
+                } catch (error) {
+                    addToConsoleOutput('WebSocket error: ' + error.message);
+                }
+            });
+            
+            addToConsoleOutput('Manual Motion Tracking switch created');
+        }
+
+        // Initialize
+        interceptConsole();
+        
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            setTimeout(checkMotionTracking, 1000);
+        });
+        
+        addToConsoleOutput('Motion Tracking Debug Tool initialized');
+    </script>
+</body>
+</html>

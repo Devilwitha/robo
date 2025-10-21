@@ -1,0 +1,117 @@
+ROBOT UPDATE INSTRUCTIONS
+=========================
+
+PROBLEMS FIXED: 
+- Speed Limiter / Move Control Speed funktioniert nicht
+- ModuleNotFoundError: No module named 'speed_manager'
+- AssertionError: View function mapping is overwriting an existing endpoint
+
+FILES TO UPLOAD:
+- robot.py (integrated SpeedManager, fixed speedSet function)
+- camera_opencv.py (improved speed command parsing, BolliOs + Motion Tracking integration)
+- webServer.py (speed debugging logs, BolliOs + Motion Tracking WebSocket commands)
+- app.py (FIXED: removed duplicate Flask routes)
+- BollshiiOs.py (gyro balance system with green LEDs)
+- MotionTracker.py (NEW: silent motion detection and tracking system)
+- dist/index.html (UPDATED: includes motion-tracking.js script)
+- dist/js/motion-tracking.js (NEW: Motion Tracking switch using BolliOs pattern)
+- motion-tracking-test.html (NEW: Step-by-step integration test)
+- motion-tracking-debug.html (NEW: Advanced debug tool)
+- simple_speed_test.py (test script)
+- quick_fix_test.py (comprehensive test script)
+- minimal_test.py (minimal test without optional dependencies)
+- motion_tracking_test.py (NEW: Motion Tracking specific tests)
+
+UPLOAD STEPS:
+1. Stop the service: 
+   sudo systemctl stop wavego.service
+
+2. Backup original files (optional):
+   sudo cp /home/devil/WAVEGO/RPi/robot.py /home/devil/WAVEGO/RPi/robot.py.backup
+   sudo cp /home/devil/WAVEGO/RPi/camera_opencv.py /home/devil/WAVEGO/RPi/camera_opencv.py.backup
+   sudo cp /home/devil/WAVEGO/RPi/webServer.py /home/devil/WAVEGO/RPi/webServer.py.backup
+   sudo cp /home/devil/WAVEGO/RPi/app.py /home/devil/WAVEGO/RPi/app.py.backup
+
+3. Copy all files to: /home/devil/WAVEGO/RPi/
+
+4. Set permissions: 
+   sudo chown devil:devil /home/devil/WAVEGO/RPi/*.py
+
+5. Test the fixes:
+   cd /home/devil/WAVEGO/RPi/
+   
+   Option A (full test if all dependencies are installed):
+   python3 quick_fix_test.py
+   
+   Option B (minimal test for core functionality):
+   python3 minimal_test.py
+
+6. Install missing dependencies (optional):
+   bash install_dependencies.sh
+
+7. Start service:
+   sudo systemctl start wavego.service
+
+8. Check status:
+   sudo systemctl status wavego.service
+
+TROUBLESHOOTING MOTION TRACKING SWITCH:
+
+Falls der Motion Tracking Switch nicht angezeigt wird:
+
+1. QUICK FIX - Browser Console:
+   - F12 drücken -> Console Tab öffnen
+   - Eingeben: motionTrackingDebug.retryIntegration()
+   - Enter drücken
+
+2. STEP-BY-STEP TEST:
+   - Öffnen: http://roboter-ip/motion-tracking-test.html
+   - Alle Tests durchlaufen lassen
+   - Bei Fehlern auf "Create Mock Interface" und "Force Add Motion Tracking Switch"
+
+3. MANUAL INTEGRATION:
+   - Browser Console öffnen (F12)
+   - Eingeben: motionTrackingDebug.addSwitch()
+   - Falls nicht verfügbar: Seite neu laden und warten (3-5 Sekunden)
+
+4. FALLBACK SOLUTION:
+   - motion-tracking-test.html öffnen
+   - Button "Force Add Motion Tracking Switch" klicken
+   - Switch sollte sofort erscheinen
+
+5. SCRIPT CHECKING:
+   - Prüfen ob /js/motion-tracking.js erreichbar ist
+   - Browser Console auf Fehler prüfen
+   - Falls 404 Error: Datei in /RPi/dist/js/ uploaden
+
+LOG CHECKING:
+journalctl -u wavego.service -f
+
+KEY FIXES:
+✓ Speed Control: Web slider now properly controls robot speed
+✓ BolliOs Button: Gyro balance with green LED indication  
+✓ Motion Tracking: NEW silent motion detection that follows movement (blue LEDs)
+✓ Import Errors: SpeedManager integrated directly into robot.py
+✓ Flask Conflicts: Duplicate API routes removed
+✓ Error Handling: Robust parsing and validation
+✓ Debug Logs: Detailed logging for troubleshooting
+
+WHAT WAS FIXED:
+1. ModuleNotFoundError - SpeedManager now integrated into robot.py
+2. Flask route conflicts - Removed duplicate /api/speed/* endpoints
+3. Speed slider not working - Fixed wsB command parsing
+4. BolliOs integration - Dynamic imports to avoid circular dependencies
+5. NEW: Motion Tracking - Silent motion detection with automatic following
+6. Vue.js compatibility - Motion Tracking switch works with minified Vue.js interface
+7. Debug tools - motion-tracking-debug.html for troubleshooting integration issues
+
+MOTION TRACKING FEATURES:
+✓ Silent Operation: No buzzer/beeping sounds
+✓ Blue LEDs: Visual indication when active
+✓ Smart Following: Robot turns and moves toward detected motion
+✓ Auto Integration: Switch appears automatically in web interface
+✓ Fallback Integration: Manual integration if auto-detection fails
+✓ WebSocket Control: Real-time activation via web interface
+✓ Debug Support: Comprehensive debug tool for troubleshooting
+
+The service should now start without errors and include Motion Tracking!

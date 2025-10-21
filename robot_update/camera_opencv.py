@@ -35,7 +35,29 @@ except ImportError:
     PICAMERA2_AVAILABLE = False
     Picamera2 = None
 
-# BollshiiOs import wird nur bei Bedarf gemacht, um Circular-Import zu vermeiden
+# BollshiiOs import - optional and delayed to avoid circular imports
+try:
+    import BollshiiOs
+    BOLLSHIIOS_AVAILABLE = True
+except ImportError:
+    print("Warning: BollshiiOs not available. Gyro balance integration disabled.")
+    BOLLSHIIOS_AVAILABLE = False
+    BollshiiOs = None
+
+# Motion Tracker import - try simple version first, then complex version
+try:
+    import SimpleMotionTracker as MotionTracker
+    MOTION_TRACKER_AVAILABLE = True
+    print("Using SimpleMotionTracker")
+except ImportError:
+    try:
+        import MotionTracker
+        MOTION_TRACKER_AVAILABLE = True
+        print("Using MotionTracker")
+    except ImportError:
+        print("Warning: No motion tracker available. Motion tracking features disabled.")
+        MOTION_TRACKER_AVAILABLE = False
+        MotionTracker = None
 
 curpath = os.path.realpath(__file__)
 thisPath = "/" + os.path.dirname(curpath)
@@ -786,13 +808,6 @@ def commandAct(act, inputA):
         except ImportError as e:
             print(f"BollshiiOs not available: {e}")
 
-    # openCV ctrl.
-    elif act == 'faceDetection':
-        Camera.modeSelect = 'faceDetection'
-    elif act == 'faceDetectionOff':
-        Camera.modeSelect = 'none'
-        robot.buzzerCtrl(0, 0)
-    
     # Motion Tracking ctrl.
     elif act == 'motionTracking':
         print("=== MOTION TRACKING ACTIVATION (INLINE VERSION) ===")
@@ -807,7 +822,13 @@ def commandAct(act, inputA):
         robot.stopFB()
         robot.stopLR()
         print("=== MOTION TRACKING STOPPED ===")
-    
+
+    # openCV ctrl.
+    elif act == 'faceDetection':
+        Camera.modeSelect = 'faceDetection'
+    elif act == 'faceDetectionOff':
+        Camera.modeSelect = 'none'
+        robot.buzzerCtrl(0, 0)
     elif 'trackLine' == act:
         Camera.modeSelect = 'findlineCV'
         Camera.CVMode = 'run'

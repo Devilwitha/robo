@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motion Tracking Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+        .test-container { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; margin: 10px 0; }
+        #console { background: #1a1a1a; color: #00ff00; padding: 15px; border-radius: 4px; font-family: monospace; height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🎯 Motion Tracking Integration Test</h1>
+    
+    <div class="test-container">
+        <h2>Schritt 1: Script Loading Test</h2>
+        <div id="scriptStatus" class="status info">Testing...</div>
+        <button onclick="testScriptLoading()">Test Script Loading</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Schritt 2: DOM Integration Test</h2>
+        <div id="domStatus" class="status info">Waiting...</div>
+        <button onclick="testDOMIntegration()">Test DOM Integration</button>
+        <button onclick="createMockInterface()">Create Mock Interface</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Schritt 3: WebSocket Test</h2>
+        <div id="websocketStatus" class="status info">Waiting...</div>
+        <button onclick="testWebSocket()">Test WebSocket</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Schritt 4: Manual Integration</h2>
+        <button onclick="manualIntegration()">Force Add Motion Tracking Switch</button>
+        <div id="manualStatus" class="status info">Ready for manual integration</div>
+    </div>
+
+    <div class="test-container">
+        <h2>Console Output</h2>
+        <div id="console"></div>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
+
+    <!-- Mock Actions section for testing -->
+    <div class="test-container">
+        <h2>Mock Actions Section (for testing)</h2>
+        <div class="mod-sheet">
+            <div class="mod-title">Actions</div>
+            <div class="mod-wrapper">
+                <div class="button-child">
+                    <button id="bollios-btn" class="v-btn">BolliOs</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let consoleDiv = document.getElementById('console');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff4444' : type === 'warn' ? '#ffaa00' : '#00ff00';
+            consoleDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function clearConsole() {
+            consoleDiv.innerHTML = '';
+        }
+
+        function testScriptLoading() {
+            const status = document.getElementById('scriptStatus');
+            log('Testing script loading...');
+            
+            // Create and load the motion tracking script
+            const script = document.createElement('script');
+            script.src = '/js/motion-tracking.js';
+            script.onload = function() {
+                log('✅ motion-tracking.js loaded successfully');
+                status.innerHTML = '<div class="success">✅ Script loaded successfully</div>';
+                
+                // Test if functions are available
+                setTimeout(() => {
+                    if (typeof window.motionTrackingDebug !== 'undefined') {
+                        log('✅ motionTrackingDebug interface available');
+                        status.innerHTML += '<div class="success">✅ Debug interface available</div>';
+                    } else {
+                        log('❌ motionTrackingDebug interface not found');
+                        status.innerHTML += '<div class="error">❌ Debug interface not available</div>';
+                    }
+                }, 1000);
+            };
+            script.onerror = function() {
+                log('❌ Failed to load motion-tracking.js');
+                status.innerHTML = '<div class="error">❌ Failed to load script</div>';
+            };
+            document.head.appendChild(script);
+        }
+
+        function testDOMIntegration() {
+            const status = document.getElementById('domStatus');
+            log('Testing DOM integration...');
+            
+            if (typeof window.motionTrackingDebug !== 'undefined') {
+                log('Attempting automatic integration...');
+                window.motionTrackingDebug.addSwitch();
+                
+                setTimeout(() => {
+                    const motionContainer = document.getElementById('motion-tracking-container');
+                    if (motionContainer) {
+                        log('✅ Motion tracking switch found in DOM');
+                        status.innerHTML = '<div class="success">✅ Switch integrated successfully</div>';
+                    } else {
+                        log('❌ Motion tracking switch not found in DOM');
+                        status.innerHTML = '<div class="error">❌ Switch not integrated</div>';
+                    }
+                }, 1000);
+            } else {
+                log('❌ motionTrackingDebug not available');
+                status.innerHTML = '<div class="error">❌ Debug interface not available</div>';
+            }
+        }
+
+        function createMockInterface() {
+            log('Creating mock interface for testing...');
+            
+            // Remove existing mock if it exists
+            const existing = document.querySelector('.mock-interface');
+            if (existing) existing.remove();
+            
+            // Create mock Vue.js-like interface
+            const mockApp = document.createElement('div');
+            mockApp.id = 'app';
+            mockApp.className = 'mock-interface';
+            mockApp.innerHTML = `
+                <div class="mod-sheet">
+                    <div class="mod-title">Actions</div>
+                    <div class="mod-wrapper">
+                        <div class="button-child">
+                            <button id="test-bollios-btn" class="v-btn" style="width: 100%; height: 36px; margin: 8px 0; background: #1976d2; color: white; border: none; border-radius: 4px;">
+                                BolliOs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            mockApp.style.cssText = `
+                border: 2px dashed #ccc;
+                padding: 20px;
+                margin: 20px 0;
+                background: #fafafa;
+            `;
+            
+            document.body.appendChild(mockApp);
+            log('✅ Mock interface created');
+            
+            // Try to integrate motion tracking into mock interface
+            setTimeout(() => {
+                testDOMIntegration();
+            }, 500);
+        }
+
+        function testWebSocket() {
+            const status = document.getElementById('websocketStatus');
+            log('Testing WebSocket connection...');
+            
+            try {
+                const ws = new WebSocket('ws://' + location.hostname + ':8888');
+                
+                ws.onopen = function() {
+                    log('✅ WebSocket connected successfully');
+                    status.innerHTML = '<div class="success">✅ WebSocket connection successful</div>';
+                    
+                    // Test sending motion tracking commands
+                    ws.send('admin:123456'); // Auth
+                    setTimeout(() => {
+                        ws.send('motionTracking');
+                        log('📤 Sent test command: motionTracking');
+                        
+                        setTimeout(() => {
+                            ws.send('motionTrackingOff');
+                            log('📤 Sent test command: motionTrackingOff');
+                        }, 1000);
+                    }, 500);
+                };
+                
+                ws.onclose = function() {
+                    log('🔌 WebSocket connection closed');
+                };
+                
+                ws.onerror = function(error) {
+                    log('❌ WebSocket error: ' + error);
+                    status.innerHTML = '<div class="error">❌ WebSocket connection failed</div>';
+                };
+                
+            } catch (error) {
+                log('❌ WebSocket test failed: ' + error.message);
+                status.innerHTML = '<div class="error">❌ WebSocket test failed</div>';
+            }
+        }
+
+        function manualIntegration() {
+            const status = document.getElementById('manualStatus');
+            log('Performing manual integration...');
+            
+            // Create motion tracking switch manually
+            const container = document.createElement('div');
+            container.id = 'motion-tracking-container-manual';
+            container.style.cssText = `
+                width: 100%;
+                margin: 12px 0;
+                padding: 16px;
+                background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+                border: 2px solid #2196F3;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+            `;
+            
+            container.innerHTML = `
+                <div style="font-size: 14px; font-weight: 600; color: #1565C0; margin-bottom: 8px; text-align: center;">
+                    🎯 Motion Tracking (Manual)
+                </div>
+                <div style="font-size: 11px; color: #424242; margin-bottom: 12px; text-align: center; font-style: italic;">
+                    Silent motion detection - follows movement without beeping
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <label style="font-size: 13px; color: #1565C0; font-weight: 500; cursor: pointer;">
+                        Follow Motion
+                    </label>
+                    <input type="checkbox" id="manual-motion-toggle" style="transform: scale(1.5);">
+                </div>
+                <div id="manual-motion-status" style="padding: 6px 12px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 15px; font-size: 12px; text-align: center; color: #666;">
+                    🔘 Motion Tracking OFF
+                </div>
+            `;
+            
+            // Add to Actions section or body
+            const actionsWrapper = document.querySelector('.mod-wrapper');
+            if (actionsWrapper) {
+                actionsWrapper.appendChild(container);
+                log('✅ Manual switch added to Actions section');
+            } else {
+                document.body.appendChild(container);
+                log('✅ Manual switch added to body');
+            }
+            
+            // Add event listener
+            const toggle = document.getElementById('manual-motion-toggle');
+            const statusDiv = document.getElementById('manual-motion-status');
+            
+            toggle.addEventListener('change', function() {
+                const isActive = this.checked;
+                const command = isActive ? 'motionTracking' : 'motionTrackingOff';
+                
+                statusDiv.textContent = isActive ? 
+                    '🔵 Motion Tracking ACTIVE - Blue LEDs ON' : 
+                    '🔘 Motion Tracking OFF';
+                
+                statusDiv.style.background = isActive ? '#E3F2FD' : '#f5f5f5';
+                statusDiv.style.color = isActive ? '#1565C0' : '#666';
+                
+                log(`🎯 Manual toggle: ${command}`);
+                
+                // Try to send WebSocket command
+                if (typeof window.motionTrackingDebug !== 'undefined') {
+                    window.motionTrackingDebug.sendCommand(command);
+                } else {
+                    log('⚠️ motionTrackingDebug not available for command sending');
+                }
+            });
+            
+            status.innerHTML = '<div class="success">✅ Manual integration completed</div>';
+        }
+
+        // Auto-start basic tests
+        window.addEventListener('load', () => {
+            log('🎯 Motion Tracking Integration Test started');
+            log('Page loaded, starting tests...');
+            
+            setTimeout(() => {
+                testScriptLoading();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
