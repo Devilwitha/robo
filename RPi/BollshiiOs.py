@@ -21,13 +21,15 @@ def start_gyro_balance():
         balance_running = True
         print('BolliOs: Gyro balance mode activated')
         
+        # Set LEDs to green immediately when activated
+        robot.lightCtrl('green', 0)
+        
         # Start balance thread
         balance_thread = threading.Thread(target=balance_loop)
         balance_thread.daemon = True
         balance_thread.start()
         
-        # Visual feedback
-        robot.lightCtrl('green', 0)
+        # Audio feedback
         robot.buzzerCtrl(1, 0)
         time.sleep(0.1)
         robot.buzzerCtrl(0, 0)
@@ -51,8 +53,11 @@ def stop_gyro_balance():
         robot.stopLR()
         robot.stopFB()
         
-        # Visual feedback
+        # Set LEDs to blue when deactivated
         robot.lightCtrl('blue', 0)
+        print('BolliOs: LEDs set to BLUE (inactive)')
+        
+        # Audio feedback
         robot.buzzerCtrl(1, 0)
         time.sleep(0.1)
         robot.buzzerCtrl(0, 0)
@@ -64,20 +69,23 @@ def balance_loop():
     print('BolliOs: Starting balance loop...')
     balance_cycles = 0
     
+    # Ensure LEDs are green at start of balance loop
+    robot.lightCtrl('green', 0)
+    
     while balance_running:
         try:
             balance_cycles += 1
+            
+            # Keep LEDs green during active balancing
+            robot.lightCtrl('green', 0)
             
             # Use the robot's steady mode for actual balancing
             # This should activate the gyro-based balance control on the Arduino
             robot.steadyMode()
             
-            # Visual indication every 50 cycles (approximately every 5 seconds)
-            if balance_cycles % 50 == 0:
-                robot.lightCtrl('green', 0)
-                print(f'BolliOs: Balance active - cycle {balance_cycles}')
-                time.sleep(0.05)
-                robot.lightCtrl('cyan', 0)
+            # Status indication every 100 cycles (approximately every 10 seconds)
+            if balance_cycles % 100 == 0:
+                print(f'BolliOs: Balance active - cycle {balance_cycles}, LEDs: GREEN')
             
             # Longer delay for balance mode to prevent overloading the Arduino
             time.sleep(0.1)
@@ -87,13 +95,14 @@ def balance_loop():
             # On error, stop balancing gracefully
             robot.stopLR()
             robot.stopFB()
+            robot.lightCtrl('red', 0)  # Red to indicate error
             time.sleep(0.5)
             break
     
     # Cleanup when exiting balance loop
     robot.stopLR()
     robot.stopFB()
-    robot.lightCtrl('blue', 0)
+    robot.lightCtrl('blue', 0)  # Blue when inactive
     print('BolliOs: Balance loop ended gracefully')
 
 def toggle_gyro_balance():
