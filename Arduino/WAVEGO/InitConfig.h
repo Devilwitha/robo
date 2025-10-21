@@ -112,6 +112,31 @@ void InaDataUpdate(){
   power_mW = ina219.getBusPower();
   loadVoltage_V  = busVoltage_V + (shuntVoltage_mV/1000);
   ina219_overflow = ina219.getOverflow();
+  
+  // Calculate battery percentage for 2x 18650 batteries
+  batteryPercentage = ((loadVoltage_V - batteryVoltageMin) / (batteryVoltageMax - batteryVoltageMin)) * 100.0;
+  if(batteryPercentage > 100.0) batteryPercentage = 100.0;
+  if(batteryPercentage < 0.0) batteryPercentage = 0.0;
+}
+
+// Add command to history
+void addCommandToHistory(String command) {
+  // Shift commands down
+  lastCommands[2] = lastCommands[1];
+  lastCommands[1] = lastCommands[0];
+  lastCommands[0] = command;
+}
+
+// Update movement display
+void updateMovementDisplay(String movement) {
+  lastMovement = movement;
+  addCommandToHistory("Move: " + movement);
+}
+
+// Update speed display
+void updateSpeedDisplay(int speed) {
+  lastSpeed = speed;
+  addCommandToHistory("Speed: " + String(speed) + "%");
 }
 
 
@@ -128,6 +153,16 @@ int CURRENT_PAGE = 1;
 int PAGE_NUM = 2;
 int PAGE_FLASH = 3000;
 unsigned long LAST_FLASH;
+
+// Battery percentage calculation for 2x 18650 batteries
+float batteryPercentage = 100.0;
+float batteryVoltageMin = 7.0;  // 2x 3.5V (nearly empty)
+float batteryVoltageMax = 8.4;  // 2x 4.2V (fully charged)
+
+// Command history for OLED display
+String lastCommands[3] = {"System Ready", "", ""};
+String lastMovement = "STOP";
+int lastSpeed = 100;
 
 void InitScreen(){
   // if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -181,30 +216,69 @@ void allDataUpdate(){
     display.setCursor(0,0);
 
     if(CURRENT_PAGE == 1){
+      // === LINE 1: BATTERY PERCENTAGE (ALWAYS ON TOP) ===
+      display.print(F("BAT: "));
+      display.print((int)batteryPercentage);
+      display.print(F("% ("));
+      display.print(loadVoltage_V, 1);
+      display.println(F("V)"));
+      
+      // === LINE 2: WIFI STATUS ===
       if(WIFI_MODE == 1){
         display.print(F("[AP] "));
         if(!UPPER_TYPE){
           display.println(IP_ADDRESS);
         }
         else if(UPPER_TYPE){
-          display.println(UPPER_IP);
+          display.print(UPPER_IP);
+          display.print(F(" S:"));
+          display.println(lastSpeed);
         }
       }
-      else if(WIFI_MODE == 2){display.print(F("[STA] "));display.println(IP_ADDRESS);}
-      else if(WIFI_MODE == 3){display.print(F("[CONNECTING]"));display.println(IP_ADDRESS);}
+      else if(WIFI_MODE == 2){
+        display.print(F("[STA] "));
+        display.print(IP_ADDRESS);
+        display.print(F(" S:"));
+        display.println(lastSpeed);
+      }
+      else if(WIFI_MODE == 3){
+        display.print(F("[CONNECTING] S:"));
+        display.println(lastSpeed);
+      }
 
-      display.print(F("[RSSI] "));display.println(WIFI_RSSI);
+      // === LINE 3: CURRENT STATUS ===
+      display.print(F("Move: "));
+      display.print(lastMovement);
+      display.print(F(" F:"));
+      display.println(funcMode);
 
-      display.print(F("[FB]"));display.print(moveFB);display.print(F(" [LR]"));display.print(moveLR);
-      display.print(F(" [D]"));display.print(debugMode);display.print(F(" [F]"));display.println(funcMode);
-
-      display.print(F("[BATTERY] "));display.println(loadVoltage_V);
+      // === LINE 4: LATEST COMMAND ===
+      display.print(F("Cmd: "));
+      if(lastCommands[0].length() > 16) {
+        display.println(lastCommands[0].substring(0, 16));
+      } else {
+        display.println(lastCommands[0]);
+      }
     }
     else if(CURRENT_PAGE == 2){
-      display.println(F("  InitPos: G12 - 3V3"));
-      display.println(F("  LED G21 G15 G12 3V3"));
-      display.println(F("  TX  RX  GND  5V 5V"));
-      display.println(F("     [[SWTICH--]]   "));
+      // === PAGE 2: COMMAND HISTORY ===
+      // === LINE 1: BATTERY PERCENTAGE (ALWAYS ON TOP) ===
+      display.print(F("BAT: "));
+      display.print((int)batteryPercentage);
+      display.print(F("% HISTORY"));
+      display.println();
+      
+      // === LINES 2-4: COMMAND HISTORY ===
+      for(int i = 0; i < 3; i++) {
+        if(lastCommands[i].length() > 0) {
+          display.print(F("> "));
+          if(lastCommands[i].length() > 18) {
+            display.println(lastCommands[i].substring(0, 18));
+          } else {
+            display.println(lastCommands[i]);
+          }
+        }
+      }
     }
 
     display.display();
@@ -213,25 +287,29 @@ void allDataUpdate(){
     LAST_FLASH = millis();
   }
   else if(debugMode){
-    display.print(F("0-"));display.print(CurrentPWM[0]);
-    display.print(F("1-"));display.print(CurrentPWM[1]);
-    display.print(F("2-"));display.print(CurrentPWM[2]);
-    display.print(F("3-"));display.println(CurrentPWM[3]);
+    // === DEBUG MODE: SERVO POSITIONS ===
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0,0);
+    
+    // === LINE 1: BATTERY PERCENTAGE (ALWAYS ON TOP) ===
+    display.print(F("BAT: "));
+    display.print((int)batteryPercentage);
+    display.println(F("% DEBUG"));
+    
+    // === LINES 2-4: SERVO DATA ===
+    display.print(F("0:"));display.print(CurrentPWM[0]);
+    display.print(F(" 1:"));display.print(CurrentPWM[1]);
+    display.print(F(" 2:"));display.print(CurrentPWM[2]);
+    display.print(F(" 3:"));display.println(CurrentPWM[3]);
 
-    display.print(F("4-"));display.print(CurrentPWM[4]);
-    display.print(F("5-"));display.print(CurrentPWM[5]);
-    display.print(F("6-"));display.print(CurrentPWM[6]);
-    display.print(F("7-"));display.println(CurrentPWM[7]);
-
-    display.print(F("8-"));display.print(CurrentPWM[8]);
-    display.print(F("9-"));display.print(CurrentPWM[9]);
-    display.print(F("10-"));display.print(CurrentPWM[10]);
-    display.print(F("11-"));display.println(CurrentPWM[11]);
-
-    display.print(F("12-"));display.print(CurrentPWM[12]);
-    display.print(F("13-"));display.print(CurrentPWM[13]);
-    display.print(F("14-"));display.print(CurrentPWM[14]);
-    display.print(F("15-"));display.println(CurrentPWM[15]);
+    display.print(F("4:"));display.print(CurrentPWM[4]);
+    display.print(F(" 5:"));display.print(CurrentPWM[5]);
+    display.print(F(" 6:"));display.print(CurrentPWM[6]);
+    display.print(F(" 7:"));display.println(CurrentPWM[7]);
+    
+    display.display();
     delay(600);
   }
 }

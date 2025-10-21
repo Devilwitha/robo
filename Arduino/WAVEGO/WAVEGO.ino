@@ -88,12 +88,13 @@ void serialCtrl(){
         gestureUD = 0;
         gestureLR = 0;
         if(val == 1){
-          if(funcMode == 1){funcMode = 0;Serial.println("Steady OFF");}
-          else if(funcMode == 0){funcMode = 1;Serial.println("Steady ON");}
+          if(funcMode == 1){funcMode = 0;Serial.println("Steady OFF"); addCommandToHistory("steady OFF");}
+          else if(funcMode == 0){funcMode = 1;Serial.println("Steady ON"); addCommandToHistory("steady ON");}
         }
         else{
           funcMode = val;
           Serial.println(val);
+          addCommandToHistory("func " + String(val));
         }
       }
 
@@ -102,12 +103,12 @@ void serialCtrl(){
         funcMode  = 0;
         digitalWrite(BUZZER, HIGH);
         switch(val){
-          case 1: moveFB = 1; Serial.println("Forward");break;
-          case 2: moveLR =-1; Serial.println("TurnLeft");break;
-          case 3: moveFB = 0; Serial.println("FBStop");break;
-          case 4: moveLR = 1; Serial.println("TurnRight");break;
-          case 5: moveFB =-1; Serial.println("Backward");break;
-          case 6: moveLR = 0; Serial.println("LRStop");break;
+          case 1: moveFB = 1; Serial.println("Forward"); addCommandToHistory("move forward"); updateMovementDisplay("FWD");break;
+          case 2: moveLR =-1; Serial.println("TurnLeft"); addCommandToHistory("turn left"); updateMovementDisplay("LEFT");break;
+          case 3: moveFB = 0; Serial.println("FBStop"); addCommandToHistory("stop FB"); updateMovementDisplay("STOP");break;
+          case 4: moveLR = 1; Serial.println("TurnRight"); addCommandToHistory("turn right"); updateMovementDisplay("RIGHT");break;
+          case 5: moveFB =-1; Serial.println("Backward"); addCommandToHistory("move backward"); updateMovementDisplay("BWD");break;
+          case 6: moveLR = 0; Serial.println("LRStop"); addCommandToHistory("stop LR"); updateMovementDisplay("STOP");break;
         }
       }
 
@@ -153,6 +154,10 @@ void serialCtrl(){
         
         Serial.print("Speed set to: ");
         Serial.println(robotSpeed);
+        
+        // Add to command history
+        String speedCmd = "speed " + String(robotSpeed);
+        addCommandToHistory(speedCmd);
         
         // Adjust STEP_ITERATE based on speed (1-100)
         // Speed 1 = very slow, Speed 100 = fastest
