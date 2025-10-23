@@ -35,7 +35,59 @@ except ImportError:
     PICAMERA2_AVAILABLE = False
     Picamera2 = None
 
-# BollshiiOs import wird nur bei Bedarf gemacht, um Circular-Import zu vermeiden
+# BollshiiOs import - optional and delayed to avoid circular imports
+try:
+    import BollshiiOs
+    BOLLSHIIOS_AVAILABLE = True
+except ImportError:
+    print("Warning: BollshiiOs not available. Gyro balance integration disabled.")
+    BOLLSHIIOS_AVAILABLE = False
+    BollshiiOs = None
+
+# Motion Tracker import - try simple version first, then complex version
+try:
+    import SimpleMotionTracker as MotionTracker
+    MOTION_TRACKER_AVAILABLE = True
+    print("Using SimpleMotionTracker")
+except ImportError:
+    try:
+        import MotionTracker
+        MOTION_TRACKER_AVAILABLE = True
+        print("Using MotionTracker")
+    except ImportError:
+        print("Warning: No motion tracker available. Motion tracking features disabled.")
+        MOTION_TRACKER_AVAILABLE = False
+        MotionTracker = None
+
+# Object Recognition import
+try:
+    import object_recognition
+    OBJECT_RECOGNITION_AVAILABLE = True
+    print("Object Recognition module loaded")
+except ImportError:
+    print("Warning: object_recognition not available. Object detection features disabled.")
+    OBJECT_RECOGNITION_AVAILABLE = False
+    object_recognition = None
+
+# Gesture Recognition import
+try:
+    import gesture_recognition
+    GESTURE_RECOGNITION_AVAILABLE = True
+    print("Gesture Recognition module loaded")
+except ImportError:
+    print("Warning: gesture_recognition not available. Gesture control features disabled.")
+    GESTURE_RECOGNITION_AVAILABLE = False
+    gesture_recognition = None
+
+# Media Capture import
+try:
+    import media_capture
+    MEDIA_CAPTURE_AVAILABLE = True
+    print("Media Capture module loaded")
+except ImportError:
+    print("Warning: media_capture not available. Photo/Video features disabled.")
+    MEDIA_CAPTURE_AVAILABLE = False
+    media_capture = None
 
 curpath = os.path.realpath(__file__)
 thisPath = "/" + os.path.dirname(curpath)
@@ -341,6 +393,102 @@ class CVThread(threading.Thread):
                 cv2.putText(imgInput,f'PERSON FOLLOWING ERROR: {str(e)[:40]}',(40,60), CVThread.font, 0.5,(0,0,255),2,cv2.LINE_AA)
                 robot.stopLR()
                 robot.stopFB()
+
+        elif self.CVMode == 'objectRecognition':
+            # OBJECT RECOGNITION using OpenCV DNN
+            if OBJECT_RECOGNITION_AVAILABLE and object_recognition:
+                try:
+                    # Use the object recognition module
+                    detected_objects = object_recognition.detect_objects(imgInput)
+                    
+                    if detected_objects:
+                        # Draw detection results
+                        for obj in detected_objects:
+                            name = obj.get('name', 'Unknown')
+                            confidence = obj.get('confidence', 0)
+                            box = obj.get('box', [0, 0, 0, 0])
+                            x, y, w, h = box
+                            
+                            # Draw bounding box
+                            cv2.rectangle(imgInput, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                            cv2.putText(imgInput, f'{name}: {confidence:.2f}', (x, y - 10), 
+                                      CVThread.font, 0.5, (0, 255, 0), 2)
+                        
+                        cv2.putText(imgInput, f'Objects Found: {len(detected_objects)}', (40, 60), 
+                                  CVThread.font, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
+                    else:
+                        cv2.putText(imgInput, 'Scanning for Objects...', (40, 60), 
+                                  CVThread.font, 0.6, (255, 255, 0), 2, cv2.LINE_AA)
+                        
+                except Exception as e:
+                    cv2.putText(imgInput, f'Object Recognition Error: {str(e)[:30]}', (40, 60), 
+                              CVThread.font, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
+            else:
+                cv2.putText(imgInput, 'Object Recognition Not Available', (40, 60), 
+                          CVThread.font, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
+
+        elif self.CVMode == 'gestureRecognition':
+            # GESTURE RECOGNITION using MediaPipe
+            if GESTURE_RECOGNITION_AVAILABLE and gesture_recognition:
+                try:
+                    # Use the gesture recognition module
+                    result = gesture_recognition.process_frame(imgInput)
+                    
+                    if result and 'gesture' in result:
+                        gesture = result['gesture']
+                        confidence = result.get('confidence', 0)
+                        command = result.get('robot_command')
+                        
+                        # Display gesture info
+                        cv2.putText(imgInput, f'Gesture: {gesture}', (40, 60), 
+                                  CVThread.font, 0.6, (0, 255, 255), 2, cv2.LINE_AA)
+                        cv2.putText(imgInput, f'Confidence: {confidence:.2f}', (40, 90), 
+                                  CVThread.font, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+                        
+                        if command:
+                            cv2.putText(imgInput, f'Command: {command}', (40, 120), 
+                                      CVThread.font, 0.5, (255, 255, 0), 1, cv2.LINE_AA)
+                            
+                            # Execute robot command based on gesture
+                            gesture_recognition.execute_robot_command(command)
+                        
+                        # Draw hand landmarks if available
+                        if 'landmarks' in result:
+                            gesture_recognition.draw_landmarks(imgInput, result['landmarks'])
+                    else:
+                        cv2.putText(imgInput, 'Show Hand Gesture...', (40, 60), 
+                                  CVThread.font, 0.6, (255, 255, 0), 2, cv2.LINE_AA)
+                        
+                except Exception as e:
+                    cv2.putText(imgInput, f'Gesture Recognition Error: {str(e)[:30]}', (40, 60), 
+                              CVThread.font, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
+            else:
+                cv2.putText(imgInput, 'Gesture Recognition Not Available', (40, 60), 
+                          CVThread.font, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
+
+        elif self.CVMode == 'mediaCapture':
+            # PHOTO/VIDEO CAPTURE MODE
+            if MEDIA_CAPTURE_AVAILABLE and media_capture:
+                try:
+                    # Display capture interface
+                    cv2.putText(imgInput, 'Media Capture Mode', (40, 60), 
+                              CVThread.font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+                    cv2.putText(imgInput, 'WebSocket Commands: photo, video_start, video_stop', (40, 90), 
+                              CVThread.font, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+                    
+                    # Show recording status if available
+                    if hasattr(media_capture, 'is_recording') and media_capture.is_recording():
+                        cv2.putText(imgInput, '● RECORDING', (imgInput.shape[1] - 200, 60), 
+                                  CVThread.font, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
+                        # Add red border for recording indication
+                        cv2.rectangle(imgInput, (0, 0), (imgInput.shape[1], imgInput.shape[0]), (0, 0, 255), 5)
+                    
+                except Exception as e:
+                    cv2.putText(imgInput, f'Media Capture Error: {str(e)[:30]}', (40, 60), 
+                              CVThread.font, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
+            else:
+                cv2.putText(imgInput, 'Media Capture Not Available', (40, 60), 
+                          CVThread.font, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
 
         return imgInput
 
@@ -786,13 +934,6 @@ def commandAct(act, inputA):
         except ImportError as e:
             print(f"BollshiiOs not available: {e}")
 
-    # openCV ctrl.
-    elif act == 'faceDetection':
-        Camera.modeSelect = 'faceDetection'
-    elif act == 'faceDetectionOff':
-        Camera.modeSelect = 'none'
-        robot.buzzerCtrl(0, 0)
-    
     # Motion Tracking ctrl.
     elif act == 'motionTracking':
         print("=== MOTION TRACKING ACTIVATION (INLINE VERSION) ===")
@@ -807,7 +948,13 @@ def commandAct(act, inputA):
         robot.stopFB()
         robot.stopLR()
         print("=== MOTION TRACKING STOPPED ===")
-    
+
+    # openCV ctrl.
+    elif act == 'faceDetection':
+        Camera.modeSelect = 'faceDetection'
+    elif act == 'faceDetectionOff':
+        Camera.modeSelect = 'none'
+        robot.buzzerCtrl(0, 0)
     elif 'trackLine' == act:
         Camera.modeSelect = 'findlineCV'
         Camera.CVMode = 'run'

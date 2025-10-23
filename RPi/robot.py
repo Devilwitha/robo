@@ -6,7 +6,32 @@ import json
 import serial
 import threading
 
-ser = serial.Serial("/dev/ttyS0",115200)
+# Serial connection with error handling
+try:
+    ser = serial.Serial("/dev/ttyS0", 115200, timeout=1)
+    SERIAL_AVAILABLE = True
+    print("Serial connection established on /dev/ttyS0")
+except serial.SerialException as e:
+    print(f"Warning: Could not open /dev/ttyS0: {e}")
+    print("Trying alternative serial ports...")
+    ser = None
+    SERIAL_AVAILABLE = False
+    
+    # Try alternative serial ports
+    alternative_ports = ["/dev/ttyAMA0", "/dev/ttyUSB0", "/dev/ttyACM0"]
+    for port in alternative_ports:
+        try:
+            ser = serial.Serial(port, 115200, timeout=1)
+            SERIAL_AVAILABLE = True
+            print(f"Serial connection established on {port}")
+            break
+        except serial.SerialException:
+            continue
+    
+    if not SERIAL_AVAILABLE:
+        print("Warning: No serial connection available. Running in simulation mode.")
+        print("Robot commands will be logged but not sent to hardware.")
+
 dataCMD = json.dumps({'var':"", 'val':0, 'ip':""})
 upperGlobalIP = 'UPPER IP'
 
@@ -58,6 +83,26 @@ class SpeedManager:
         with self.lock:
             return self.speed_history.copy()
 
+# Safe serial communication function
+def safe_serial_write(data, command_name="Unknown"):
+    """Safely write to serial connection with error handling"""
+    global ser, SERIAL_AVAILABLE
+    
+    if not SERIAL_AVAILABLE or ser is None:
+        print(f"SIMULATION: {command_name} -> {data}")
+        return False
+    
+    try:
+        ser.write(data)
+        return True
+    except serial.SerialException as e:
+        print(f"Serial error during {command_name}: {e}")
+        SERIAL_AVAILABLE = False
+        return False
+    except Exception as e:
+        print(f"Unexpected error during {command_name}: {e}")
+        return False
+
 # Global speed manager instance
 speed_manager = SpeedManager()
 
@@ -71,7 +116,7 @@ def forward(speed=None):
 		speed_manager.set_speed(speed)
 	current_speed = speed_manager.get_speed()
 	dataCMD = json.dumps({'var':"move", 'val':1, 'speed':current_speed})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "forward")
 	print(f'robot-forward at speed {current_speed}')
 
 def backward(speed=None):
@@ -79,7 +124,7 @@ def backward(speed=None):
 		speed_manager.set_speed(speed)
 	current_speed = speed_manager.get_speed()
 	dataCMD = json.dumps({'var':"move", 'val':5, 'speed':current_speed})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "backward")
 	print(f'robot-backward at speed {current_speed}')
 
 def left(speed=None):
@@ -87,7 +132,7 @@ def left(speed=None):
 		speed_manager.set_speed(speed)
 	current_speed = speed_manager.get_speed()
 	dataCMD = json.dumps({'var':"move", 'val':2, 'speed':current_speed})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "left")
 	print(f'robot-left at speed {current_speed}')
 
 def right(speed=None):
@@ -95,66 +140,66 @@ def right(speed=None):
 		speed_manager.set_speed(speed)
 	current_speed = speed_manager.get_speed()
 	dataCMD = json.dumps({'var':"move", 'val':4, 'speed':current_speed})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "right")
 	print(f'robot-right at speed {current_speed}')
 
 def stopLR():
 	dataCMD = json.dumps({'var':"move", 'val':6})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "stopLR")
 	print('robot-stop')
 
 def stopFB():
 	dataCMD = json.dumps({'var':"move", 'val':3})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "stopFB")
 	print('robot-stop')
 
 
 
 def lookUp():
 	dataCMD = json.dumps({'var':"ges", 'val':1})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "lookUp")
 	print('robot-lookUp')
 
 def lookDown():
 	dataCMD = json.dumps({'var':"ges", 'val':2})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "lookDown")
 	print('robot-lookDown')
 
 def lookStopUD():
 	dataCMD = json.dumps({'var':"ges", 'val':3})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "lookStopUD")
 	print('robot-lookStopUD')
 
 def lookLeft():
 	dataCMD = json.dumps({'var':"ges", 'val':4})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "lookLeft")
 	print('robot-lookLeft')
 
 def lookRight():
 	dataCMD = json.dumps({'var':"ges", 'val':5})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "lookRight")
 	print('robot-lookRight')
 
 def lookStopLR():
 	dataCMD = json.dumps({'var':"ges", 'val':6})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "lookStopLR")
 	print('robot-lookStopLR')
 
 
 
 def steadyMode():
 	dataCMD = json.dumps({'var':"funcMode", 'val':1})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "steadyMode")
 	print('robot-steady')
 
 def jump():
 	dataCMD = json.dumps({'var':"funcMode", 'val':4})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "jump")
 	print('robot-jump')
 
 def handShake():
 	dataCMD = json.dumps({'var':"funcMode", 'val':3})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "handShake")
 	print('robot-handshake')
 
 
@@ -178,12 +223,12 @@ def lightCtrl(colorName, cmdInput):
 	elif colorName == 'cyber':
 		colorNum = 7
 	dataCMD = json.dumps({'var':"light", 'val':colorNum})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "unknown")
 
 
 def buzzerCtrl(buzzerCtrl, cmdInput):
 	dataCMD = json.dumps({'var':"buzzer", 'val':buzzerCtrl})
-	ser.write(dataCMD.encode())
+	safe_serial_write(dataCMD.encode(), "buzzerCtrl")
 
 def speedSet(speed):
 	"""Set the global movement speed (1-100)"""
@@ -191,7 +236,7 @@ def speedSet(speed):
 		current_speed = speed_manager.get_speed()
 		# Send speed setting to Arduino
 		dataCMD = json.dumps({'var':"speed", 'val':current_speed})
-		ser.write(dataCMD.encode())
+		safe_serial_write(dataCMD.encode(), "speedSet")
 		print(f'robot-speedSet: Set to {current_speed}')
 		return True
 	else:

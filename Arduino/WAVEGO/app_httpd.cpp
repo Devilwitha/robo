@@ -26,7 +26,7 @@ extern int WIFI_RSSI;
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
-#include "dl_lib_matrix3d.h"
+// #include "dl_lib_matrix3d.h" // Commented out - ESP32-AI library not available
 #include <esp32-hal-ledc.h>
 #include "esp_http_server.h"
 #include "esp_timer.h"
@@ -134,7 +134,7 @@ static esp_err_t stream_handler(httpd_req_t *req) {
   size_t _jpg_buf_len = 0;
   uint8_t * _jpg_buf = NULL;
   char * part_buf[64];
-  dl_matrix3du_t *image_matrix = NULL;
+  // dl_matrix3du_t *image_matrix = NULL; // Commented out - ESP32-AI library not available
  
   static int64_t last_frame = 0;
   if (!last_frame) {

@@ -94,6 +94,16 @@ float current_mA = 0.0;
 float power_mW = 0.0; 
 bool ina219_overflow = false;
 
+// Battery percentage calculation for 2x 18650 batteries
+float batteryPercentage = 100.0;
+float batteryVoltageMin = 7.0;  // 2x 3.5V (nearly empty)
+float batteryVoltageMax = 8.4;  // 2x 4.2V (fully charged)
+
+// Command history for OLED display
+String lastCommands[3] = {"System Ready", "", ""};
+String lastMovement = "STOP";
+int lastSpeed = 100;
+
 void InitINA219(){
   // if(!ina219.init()){
   //   Serial.println("INA219 not connected!");
@@ -153,16 +163,6 @@ int CURRENT_PAGE = 1;
 int PAGE_NUM = 2;
 int PAGE_FLASH = 3000;
 unsigned long LAST_FLASH;
-
-// Battery percentage calculation for 2x 18650 batteries
-float batteryPercentage = 100.0;
-float batteryVoltageMin = 7.0;  // 2x 3.5V (nearly empty)
-float batteryVoltageMax = 8.4;  // 2x 4.2V (fully charged)
-
-// Command history for OLED display
-String lastCommands[3] = {"System Ready", "", ""};
-String lastMovement = "STOP";
-int lastSpeed = 100;
 
 void InitScreen(){
   // if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {

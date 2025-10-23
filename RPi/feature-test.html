@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAVEGO Feature Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .feature-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .feature-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ffeb3b;
+        }
+        
+        .test-button {
+            display: inline-block;
+            margin: 5px;
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online { background: #4caf50; }
+        .status-offline { background: #f44336; }
+        .status-mock { background: #ff9800; }
+        
+        #connection-status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        
+        .log-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        
+        .log-info { color: #2196F3; }
+        .log-success { color: #4CAF50; }
+        .log-warning { color: #ff9800; }
+        .log-error { color: #f44336; }
+        
+        /* Include BolliOs styles */
+        .system-control-panel {
+            margin: 20px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .system-control-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .system-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .shutdown-btn {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+        }
+        
+        .stow-servos-btn {
+            background: linear-gradient(135deg, #7b1fa2, #4a148c);
+        }
+        
+        .system-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .shutdown-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+        
+        .shutdown-popup.show {
+            display: flex;
+        }
+        
+        .shutdown-popup-content {
+            background: white;
+            color: black;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        .popup-buttons {
+            margin-top: 20px;
+        }
+        
+        .popup-btn {
+            margin: 0 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .confirm-btn {
+            background: #d32f2f;
+            color: white;
+        }
+        
+        .cancel-btn {
+            background: #666;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 WAVEGO Feature Test Interface</h1>
+        
+        <div id="connection-status">
+            <span class="status-indicator status-offline" id="status-indicator"></span>
+            <span id="status-text">Verbindung wird hergestellt...</span>
+        </div>
+        
+        <div class="feature-section">
+            <div class="feature-title">🔧 System Control</div>
+            <div class="system-control-panel">
+                <h3>System Control</h3>
+                <div class="system-control-buttons">
+                    <button id="shutdown-btn" class="system-btn shutdown-btn">
+                        🔌 Raspberry Pi Herunterfahren
+                    </button>
+                    <button id="stow-servos-btn" class="system-btn stow-servos-btn">
+                        📦 Servos Verstauen
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="feature-section">
+            <div class="feature-title">⚖️ BolliOs Gyro Balance</div>
+            <button class="test-button" onclick="testBolliOs('start')">BolliOs Starten</button>
+            <button class="test-button" onclick="testBolliOs('stop')">BolliOs Stoppen</button>
+            <button class="test-button" onclick="testBolliOs('toggle')">BolliOs Toggle</button>
+            <button class="test-button" onclick="testBolliOs('status')">Status Abfragen</button>
+        </div>
+        
+        <div class="feature-section">
+            <div class="feature-title">👁️ Computer Vision Features</div>
+            <button class="test-button" onclick="testCVMode('faceDetection')">Gesichtserkennung</button>
+            <button class="test-button" onclick="testCVMode('objectRecognition')">Objekterkennung</button>
+            <button class="test-button" onclick="testCVMode('gestureRecognition')">Gestenerkennung</button>
+            <button class="test-button" onclick="testCVMode('motionTracking')">Motion Tracking</button>
+            <button class="test-button" onclick="testCVMode('none')">CV Stoppen</button>
+        </div>
+        
+        <div class="feature-section">
+            <div class="feature-title">🎮 Robot Movement</div>
+            <button class="test-button" onclick="testMovement('forward')">Vorwärts</button>
+            <button class="test-button" onclick="testMovement('backward')">Rückwärts</button>
+            <button class="test-button" onclick="testMovement('left')">Links</button>
+            <button class="test-button" onclick="testMovement('right')">Rechts</button>
+            <button class="test-button" onclick="testMovement('stop')">Stop</button>
+        </div>
+        
+        <div class="feature-section">
+            <div class="feature-title">⚡ Speed Control</div>
+            <button class="test-button" onclick="testSpeed(25)">Langsam (25%)</button>
+            <button class="test-button" onclick="testSpeed(50)">Normal (50%)</button>
+            <button class="test-button" onclick="testSpeed(75)">Schnell (75%)</button>
+            <button class="test-button" onclick="testSpeed(100)">Maximum (100%)</button>
+        </div>
+        
+        <div class="feature-section">
+            <div class="feature-title">📷 Media Capture</div>
+            <button class="test-button" onclick="testMedia('photo')">Foto aufnehmen</button>
+            <button class="test-button" onclick="testMedia('video_start')">Video starten</button>
+            <button class="test-button" onclick="testMedia('video_stop')">Video stoppen</button>
+        </div>
+        
+        <div class="log-container">
+            <div><strong>📜 Test Log:</strong></div>
+            <div id="test-log"></div>
+        </div>
+    </div>
+    
+    <!-- Shutdown Popup -->
+    <div id="shutdownPopup" class="shutdown-popup">
+        <div class="shutdown-popup-content">
+            <h3>⚠️ System Herunterfahren</h3>
+            <p>Sind Sie sicher, dass Sie das System herunterfahren möchten?</p>
+            <p><strong>Diese Aktion kann nicht rückgängig gemacht werden!</strong></p>
+            <div class="popup-buttons">
+                <button id="confirmShutdownBtn" class="popup-btn confirm-btn">Ja, Herunterfahren</button>
+                <button id="cancelShutdownBtn" class="popup-btn cancel-btn">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test WebSocket connection and features
+        let ws = null;
+        let mockMode = false;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function updateConnectionStatus(status) {
+            const indicator = document.getElementById('status-indicator');
+            const text = document.getElementById('status-text');
+            
+            if (status === 'online') {
+                indicator.className = 'status-indicator status-online';
+                text.textContent = 'WebSocket verbunden';
+            } else if (status === 'mock') {
+                indicator.className = 'status-indicator status-mock';
+                text.textContent = 'Mock-Modus aktiv (Server nicht verfügbar)';
+            } else {
+                indicator.className = 'status-indicator status-offline';
+                text.textContent = 'Nicht verbunden';
+            }
+        }
+        
+        function initWebSocket() {
+            try {
+                ws = new WebSocket('ws://' + window.location.hostname + ':8888');
+                
+                ws.onopen = function() {
+                    log('WebSocket-Verbindung hergestellt', 'success');
+                    updateConnectionStatus('online');
+                    ws.send('admin:123456'); // Authentication
+                };
+                
+                ws.onmessage = function(event) {
+                    log(`Antwort erhalten: ${event.data}`, 'info');
+                };
+                
+                ws.onclose = function() {
+                    log('WebSocket-Verbindung geschlossen', 'warning');
+                    updateConnectionStatus('mock');
+                    enableMockMode();
+                };
+                
+                ws.onerror = function(error) {
+                    log('WebSocket-Fehler - aktiviere Mock-Modus', 'error');
+                    updateConnectionStatus('mock');
+                    enableMockMode();
+                };
+                
+            } catch (error) {
+                log('WebSocket-Initialisierung fehlgeschlagen - Mock-Modus aktiv', 'error');
+                updateConnectionStatus('mock');
+                enableMockMode();
+            }
+        }
+        
+        function enableMockMode() {
+            mockMode = true;
+            log('Mock-Modus aktiviert - alle Befehle werden simuliert', 'info');
+        }
+        
+        function sendCommand(command) {
+            if (mockMode || !ws || ws.readyState !== WebSocket.OPEN) {
+                log(`Mock: Befehl simuliert - ${command}`, 'warning');
+                // Simulate response
+                setTimeout(() => {
+                    log(`Mock: Antwort simuliert für - ${command}`, 'info');
+                }, 500);
+                return;
+            }
+            
+            log(`Sende Befehl: ${command}`, 'info');
+            ws.send(command);
+        }
+        
+        function sendJSON(data) {
+            const jsonStr = JSON.stringify(data);
+            if (mockMode || !ws || ws.readyState !== WebSocket.OPEN) {
+                log(`Mock: JSON simuliert - ${jsonStr}`, 'warning');
+                return;
+            }
+            
+            log(`Sende JSON: ${jsonStr}`, 'info');
+            ws.send(jsonStr);
+        }
+        
+        // Test functions
+        function testBolliOs(action) {
+            if (action === 'start') {
+                sendCommand('bolliOs');
+            } else if (action === 'stop') {
+                sendCommand('bolliOsOff');
+            } else if (action === 'toggle') {
+                sendCommand('bolliOsToggle');
+            } else if (action === 'status') {
+                sendCommand('bolliOsStatus');
+            }
+        }
+        
+        function testCVMode(mode) {
+            if (mode === 'none') {
+                sendCommand('stopCV');
+            } else {
+                sendCommand(`cvMode:${mode}`);
+            }
+        }
+        
+        function testMovement(direction) {
+            sendCommand(direction);
+        }
+        
+        function testSpeed(speed) {
+            sendCommand(`wsB${speed}`);
+        }
+        
+        function testMedia(action) {
+            sendJSON({
+                command: action
+            });
+        }
+        
+        // System control functions
+        function showShutdownPopup() {
+            document.getElementById('shutdownPopup').classList.add('show');
+        }
+        
+        function hideShutdownPopup() {
+            document.getElementById('shutdownPopup').classList.remove('show');
+        }
+        
+        function confirmShutdown() {
+            hideShutdownPopup();
+            log('System-Shutdown angefordert', 'warning');
+            sendCommand('system_shutdown');
+        }
+        
+        function stowServos() {
+            log('Servo-Stowing angefordert', 'info');
+            sendCommand('stow_servos');
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('WAVEGO Feature Test Interface geladen', 'success');
+            
+            // Add event listeners for system control
+            document.getElementById('shutdown-btn').addEventListener('click', showShutdownPopup);
+            document.getElementById('stow-servos-btn').addEventListener('click', stowServos);
+            document.getElementById('confirmShutdownBtn').addEventListener('click', confirmShutdown);
+            document.getElementById('cancelShutdownBtn').addEventListener('click', hideShutdownPopup);
+            
+            // Try to connect
+            initWebSocket();
+        });
+    </script>
+</body>
+</html>

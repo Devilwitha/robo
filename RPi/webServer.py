@@ -82,10 +82,13 @@ async def recv_msg(websocket):
             # Verarbeitet Befehle, die als einfacher String gesendet werden
             if isinstance(data, str):
                 # Leitet fast alle String-Befehle direkt an die Roboter-Steuerung weiter
-                if data not in ['get_info', 'scan', 'bolliOs', 'bolliOsOff']:
+                if data not in ['get_info', 'scan', 'bolliOs', 'bolliOsOff', 'bolliOsStatus', 'bolliOsToggle', 'motionTracking', 'motionTrackingOff', 'stopCV', 'emergency_stop'] and not data.startswith('cvMode:'):
                     flask_app.commandInput(data)
                     if 'wsB' in data:
                         print(f"SPEED DEBUG: Command forwarded to flask_app.commandInput: {data}")
+                        # Send immediate acknowledgment for speed commands
+                        response['title'] = 'speedControl'
+                        response['data'] = f'speed_set_{data.replace("wsB", "").strip()}'
 
                 if data == 'get_info':
                     response['title'] = 'get_info'
@@ -104,6 +107,29 @@ async def recv_msg(websocket):
                     response['title'] = 'bolliOs'
                     response['data'] = 'deactivated'
                 
+                elif data == 'bolliOsStatus':
+                    status = BollshiiOs.get_status()
+                    response['title'] = 'bolliOsStatus'
+                    response['data'] = status
+                
+                elif data == 'bolliOsToggle':
+                    BollshiiOs.toggle_gyro_balance()
+                    status = BollshiiOs.get_status()
+                    response['title'] = 'bolliOs'
+                    response['data'] = 'activated' if status['active'] else 'deactivated'
+                
+                elif data == 'motionTracking':
+                    flask_app.commandInput('motionTracking')
+                    response['title'] = 'motionTracking'
+                    response['data'] = 'activated'
+                    print("MOTION TRACKING: Activated via WebSocket")
+                
+                elif data == 'motionTrackingOff':
+                    flask_app.commandInput('motionTrackingOff')
+                    response['title'] = 'motionTracking'
+                    response['data'] = 'deactivated'
+                    print("MOTION TRACKING: Deactivated via WebSocket")
+                
                 elif data == 'scan':
                     radar_send = [[3,60],[10,70],[10,80],[10,90],[10,100],[10,110],[3,120]]
                     response['title'] = 'scanResult'
@@ -114,6 +140,85 @@ async def recv_msg(websocket):
                 
                 elif data == 'stopCV':
                     flask_app.modeselect('none')
+                    response['title'] = 'cvMode'
+                    response['data'] = 'none'
+                
+                elif data == 'emergency_stop':
+                    # Emergency stop all systems
+                    flask_app.modeselect('none')
+                    BollshiiOs.stop_gyro_balance()
+                    flask_app.commandInput('stop')
+                    response['title'] = 'emergency'
+                    response['data'] = 'stopped'
+                
+                elif data == 'system_shutdown':
+                    # System shutdown command
+                    print("SYSTEM: Shutdown command received")
+                    response['title'] = 'system_shutdown'
+                    response['data'] = 'shutting_down'
+                    # Send response before shutdown
+                    await websocket.send(json.dumps(response))
+                    # Schedule shutdown with delay to allow response to be sent
+                    def delayed_shutdown():
+                        time.sleep(2)
+                        os.system("sudo shutdown -h now")
+                    shutdown_thread = threading.Thread(target=delayed_shutdown)
+                    shutdown_thread.daemon = True
+                    shutdown_thread.start()
+                    continue  # Skip normal response sending
+                
+                elif data == 'stow_servos':
+                    # Servo stowing command - set servos to storage position
+                    print("SERVOS: Stowing servos to storage position")
+                    try:
+                        # Import and use the dedicated servo stowing module
+                        import servo_stow
+                        stow_system = servo_stow.ServoStow()
+                        success = stow_system.stow_all_servos()
+                        
+                        if success:
+                            response['title'] = 'stow_servos'
+                            response['data'] = 'servos_stowed'
+                            print("SERVOS: Successfully stowed to storage position")
+                        else:
+                            response['title'] = 'stow_servos'
+                            response['data'] = 'error'
+                            print("SERVOS: Failed to stow servos")
+                    except ImportError:
+                        # Fallback to basic servo commands if servo_stow module not available
+                        print("SERVOS: Using fallback servo commands")
+                        try:
+                            # Set servos to safe storage positions
+                            # Camera servo to center
+                            flask_app.commandInput('lookcenter')
+                            time.sleep(0.5)
+                            # Head servo to neutral position  
+                            flask_app.commandInput('up')
+                            time.sleep(0.5)
+                            # Additional servo commands for stowing position
+                            flask_app.commandInput('wsAD100')  # Set servo speed for smooth movement
+                            time.sleep(0.1)
+                            flask_app.commandInput('wsBC100')  # Set servo speed for smooth movement
+                            time.sleep(0.1)
+                            response['title'] = 'stow_servos'
+                            response['data'] = 'servos_stowed'
+                            print("SERVOS: Successfully stowed using fallback commands")
+                        except Exception as e:
+                            print(f"SERVOS ERROR: Failed to stow servos: {e}")
+                            response['title'] = 'stow_servos'
+                            response['data'] = 'error'
+                    except Exception as e:
+                        print(f"SERVOS ERROR: Failed to stow servos: {e}")
+                        response['title'] = 'stow_servos'
+                        response['data'] = 'error'
+                
+                # CV Mode commands
+                elif data.startswith('cvMode:'):
+                    mode = data.split(':')[1]
+                    flask_app.modeselect(mode)
+                    response['title'] = 'cvMode'
+                    response['data'] = mode
+                    print(f"CV MODE: Changed to {mode}")
 
             # Verarbeitet Befehle, die als JSON-Objekt (dict) gesendet werden
             elif isinstance(data, dict):
@@ -121,6 +226,117 @@ async def recv_msg(websocket):
                     color = data.get('data')
                     if color and len(color) == 3:
                         flask_app.colorFindSet(color[0], color[1], color[2])
+                
+                elif data.get('command') == 'modeSelect':
+                    mode = data.get('data', {}).get('mode', 'none')
+                    flask_app.modeselect(mode)
+                    response['title'] = 'cvMode'
+                    response['data'] = mode
+                
+                elif data.get('command') == 'speed':
+                    speed_value = data.get('data', {}).get('value', 100)
+                    try:
+                        speed_int = int(speed_value)
+                        # Set speed via robot module
+                        import robot
+                        if hasattr(robot, 'speed_manager'):
+                            robot.speed_manager.set_speed(speed_int)
+                        response['title'] = 'speed'
+                        response['data'] = {'value': speed_int}
+                    except (ValueError, TypeError):
+                        response['title'] = 'error'
+                        response['data'] = 'Invalid speed value'
+                
+                elif data.get('command') == 'photo':
+                    # Photo capture command
+                    try:
+                        # Use media capture module if available
+                        import media_capture
+                        photo_path = media_capture.capture_photo()
+                        response['title'] = 'photo'
+                        response['data'] = {'path': photo_path, 'status': 'captured'}
+                    except ImportError:
+                        response['title'] = 'photo'
+                        response['data'] = {'status': 'media_capture_not_available'}
+                    except Exception as e:
+                        response['title'] = 'photo'
+                        response['data'] = {'status': 'error', 'message': str(e)}
+                
+                elif data.get('command') == 'video_start':
+                    # Video recording start
+                    try:
+                        import media_capture
+                        video_path = media_capture.start_recording()
+                        response['title'] = 'video'
+                        response['data'] = {'status': 'recording_started', 'path': video_path}
+                    except ImportError:
+                        response['title'] = 'video'
+                        response['data'] = {'status': 'media_capture_not_available'}
+                    except Exception as e:
+                        response['title'] = 'video'
+                        response['data'] = {'status': 'error', 'message': str(e)}
+                
+                elif data.get('command') == 'video_stop':
+                    # Video recording stop
+                    try:
+                        import media_capture
+                        video_path = media_capture.stop_recording()
+                        response['title'] = 'video'
+                        response['data'] = {'status': 'recording_stopped', 'path': video_path}
+                    except ImportError:
+                        response['title'] = 'video'
+                        response['data'] = {'status': 'media_capture_not_available'}
+                    except Exception as e:
+                        response['title'] = 'video'
+                        response['data'] = {'status': 'error', 'message': str(e)}
+                
+                elif data.get('command') == 'emergency_stop':
+                    # Emergency stop all systems
+                    flask_app.modeselect('none')
+                    BollshiiOs.stop_gyro_balance()
+                    flask_app.commandInput('stop')
+                    response['title'] = 'emergency'
+                    response['data'] = 'all_systems_stopped'
+
+            # Verarbeitet Befehle, die als JSON-Objekt (dict) gesendet werden
+            elif isinstance(data, dict):
+                if data.get('title') == "findColorSet":
+                    color = data.get('data')
+                    if color and len(color) == 3:
+                        flask_app.colorFindSet(color[0], color[1], color[2])
+                
+                elif data.get('action') == 'motionSettings':
+                    # Handle motion tracking settings
+                    settings_type = data.get('type')
+                    settings_data = data.get('data', {})
+                    
+                    try:
+                        if settings_type == 'applyPreset':
+                            preset_name = settings_data.get('preset', 'balanced')
+                            # Apply preset via MotionTracker
+                            flask_app.commandInput(f'motionPreset:{preset_name}')
+                            response['title'] = 'motionSettings'
+                            response['data'] = f'preset_{preset_name}_applied'
+                            print(f"MOTION SETTINGS: Applied preset {preset_name}")
+                        
+                        elif settings_type == 'updateSettings':
+                            # Update individual settings
+                            flask_app.commandInput(f'motionSettings:{json.dumps(settings_data)}')
+                            response['title'] = 'motionSettings'
+                            response['data'] = 'settings_updated'
+                            print(f"MOTION SETTINGS: Updated settings {settings_data}")
+                        
+                        elif settings_type == 'resetSettings':
+                            # Reset to defaults
+                            flask_app.commandInput('motionReset')
+                            response['title'] = 'motionSettings'
+                            response['data'] = 'settings_reset'
+                            print("MOTION SETTINGS: Reset to defaults")
+                        
+                    except Exception as e:
+                        print(f"MOTION SETTINGS ERROR: {e}")
+                        response['title'] = 'motionSettings'
+                        response['data'] = f'error_{str(e)}'
 
             response_json = json.dumps(response)
             await websocket.send(response_json)

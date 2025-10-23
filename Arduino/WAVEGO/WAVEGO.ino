@@ -25,7 +25,7 @@
 // [ . . . o o ]  LED G21 G15 G12 3V3
 // [ . . . . . ]  TX  RX  GND  5V  5V
 //    <SWITCH>
-extern IPAddress IP_ADDRESS = (0, 0, 0, 0);
+extern IPAddress IP_ADDRESS = IPAddress(0, 0, 0, 0);
 extern byte WIFI_MODE = 0; // select WIFI_MODE in app_httpd.cpp
 extern void getWifiStatus();
 extern int WIFI_RSSI = 0;
