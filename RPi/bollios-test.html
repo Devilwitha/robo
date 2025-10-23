@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BolliOs Test - Original</title>
+    <link href="dist/css/bollios-switches.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        .status-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .console-log {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .test-button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        
+        .test-button:hover {
+            background: #45a049;
+        }
+        
+        .test-button.secondary {
+            background: #2196F3;
+        }
+        
+        .test-button.secondary:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>⚖️ BolliOs Test - Original Zustand</h1>
+        
+        <div class="status-info">
+            <strong>📊 Status:</strong>
+            <div id="connection-status">Verbindung wird hergestellt...</div>
+        </div>
+        
+        <!-- BolliOs Switches werden hier eingefügt -->
+        <div id="bollios-container"></div>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="test-button" onclick="testBolliOs()">🧪 BolliOs Test</button>
+            <button class="test-button secondary" onclick="testStatus()">📊 Status Abfragen</button>
+            <button class="test-button secondary" onclick="clearLog()">🗑️ Log Leeren</button>
+        </div>
+        
+        <div class="console-log" id="console-log">
+            <div>[INFO] BolliOs Test Interface geladen</div>
+        </div>
+    </div>
+
+    <script>
+        // Console log replacement
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            
+            const logDiv = document.getElementById('console-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const message = args.join(' ');
+            
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        };
+        
+        // Test functions
+        function testBolliOs() {
+            console.log('🧪 Teste BolliOs Toggle...');
+            const toggle = document.getElementById('bollios-main-toggle');
+            if (toggle) {
+                toggle.click();
+                console.log('✅ Toggle gefunden und geklickt');
+            } else {
+                console.log('❌ Toggle nicht gefunden');
+            }
+        }
+        
+        function testStatus() {
+            console.log('📊 Fordere Status an...');
+            // This would normally send a WebSocket command
+            console.log('💬 Sende: bolliOsStatus');
+        }
+        
+        function clearLog() {
+            const logDiv = document.getElementById('console-log');
+            logDiv.innerHTML = '<div>[INFO] Log geleert</div>';
+        }
+        
+        // Monitor WebSocket connection
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connection-status');
+            
+            // Check if WebSocket is available
+            try {
+                const testWs = new WebSocket('ws://' + location.hostname + ':8888');
+                
+                testWs.onopen = function() {
+                    statusDiv.innerHTML = '🟢 WebSocket verbunden (Port 8888)';
+                    statusDiv.style.color = 'green';
+                    testWs.close();
+                };
+                
+                testWs.onerror = function() {
+                    statusDiv.innerHTML = '🔴 WebSocket nicht verfügbar (Port 8888)';
+                    statusDiv.style.color = 'red';
+                };
+                
+                setTimeout(() => {
+                    if (testWs.readyState === WebSocket.CONNECTING) {
+                        statusDiv.innerHTML = '🟡 WebSocket-Verbindung wird aufgebaut...';
+                        statusDiv.style.color = 'orange';
+                        testWs.close();
+                    }
+                }, 2000);
+                
+            } catch (e) {
+                statusDiv.innerHTML = '❌ WebSocket nicht unterstützt';
+                statusDiv.style.color = 'red';
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 BolliOs Test Interface gestartet');
+            updateConnectionStatus();
+            
+            // Check every 10 seconds
+            setInterval(updateConnectionStatus, 10000);
+        });
+    </script>
+    
+    <!-- Load BolliOs JavaScript -->
+    <script src="dist/js/bollios-switches.js"></script>
+</body>
+</html>
