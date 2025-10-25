@@ -32,7 +32,7 @@ echo "--> Virtual environment created."
 echo "--> Activating virtual environment and installing Python packages..."
 source venv/bin/activate
 pip install --upgrade pip
-pip install psutil websockets Flask-Cors opencv-python pyserial imutils picamera2
+pip install psutil websockets Flask-Cors opencv-python pyserial imutils picamera2 pygame numpy
 deactivate
 echo "--> Python packages installed."
 
