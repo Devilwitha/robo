@@ -5,12 +5,12 @@ After=network.target network-online.target
 
 [Service]
 ExecStartPre=/bin/sleep 10
-ExecStart=/home/devil/WAVEGO/RPi/venv/bin/python /home/devil/WAVEGO/RPi/webServer.py
-WorkingDirectory=/home/devil/WAVEGO/RPi
+ExecStart=/home/pi/robo/venv/bin/python /home/pi/robo/RPi/webServer.py
+WorkingDirectory=/home/pi/robo/RPi
 StandardOutput=inherit
 StandardError=inherit
 Restart=always
-User=root
+User=pi
 
 [Install]
 WantedBy=multi-user.target

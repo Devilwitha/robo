@@ -4,8 +4,31 @@
 import time
 import json
 import serial
+import platform
 
-ser = serial.Serial("/dev/ttyS0",115200)
+# Try to initialize serial connection, use mock if on Windows or if port not available
+try:
+    if platform.system() == "Windows":
+        # For Windows development, we'll use a mock serial connection
+        class MockSerial:
+            def write(self, data):
+                print(f"[MOCK SERIAL] Would send: {data.decode()}")
+            def close(self):
+                pass
+        ser = MockSerial()
+        print("Running in Windows development mode - using mock serial connection")
+    else:
+        ser = serial.Serial("/dev/ttyS0", 115200)
+except Exception as e:
+    print(f"Serial connection failed: {e}")
+    # Fallback to mock serial for development
+    class MockSerial:
+        def write(self, data):
+            print(f"[MOCK SERIAL] Would send: {data.decode()}")
+        def close(self):
+            pass
+    ser = MockSerial()
+    print("Using mock serial connection due to connection failure")
 dataCMD = json.dumps({'var':"", 'val':0, 'ip':""})
 upperGlobalIP = 'UPPER IP'
 

@@ -7,12 +7,24 @@ import datetime
 import time
 import threading
 import imutils
-from picamera2 import Picamera2 # NEUER IMPORT
+import platform
+
+# Only import picamera2 on Raspberry Pi
+if platform.system() != "Windows":
+    try:
+        from picamera2 import Picamera2
+        PICAMERA_AVAILABLE = True
+    except ImportError:
+        PICAMERA_AVAILABLE = False
+        print("Warning: picamera2 not available, using OpenCV camera")
+else:
+    PICAMERA_AVAILABLE = False
+    print("Running on Windows - using OpenCV camera")
 
 curpath = os.path.realpath(__file__)
-thisPath = "/" + os.path.dirname(curpath)
+thisPath = os.path.dirname(curpath)
 
-faceCascade = cv2.CascadeClassifier(thisPath + '/haarcascade_frontalface_default.xml')
+faceCascade = cv2.CascadeClassifier(os.path.join(thisPath, 'haarcascade_frontalface_default.xml'))
 
 upperGlobalIP = 'UPPER IP'
 
@@ -484,46 +496,93 @@ class Camera(BaseCamera):
     #     camera = cv2.VideoCapture(Camera.video_source)
     #     ... (alter Code)
 
-    # ############### NEUE METHODE ##################
+    # ############### CAMERA METHOD ##################
     @staticmethod
     def frames():
-        # picamera2 initialisieren
-        picam2 = Picamera2()
-        # Eine Konfiguration fÃ¼r die Kamera erstellen (640x480)
-        config = picam2.create_preview_configuration(main={"size": (640, 480)})
-        picam2.configure(config)
-        # Kamera starten
-        picam2.start()
-        print("INFO: picamera2 gestartet.")
+        if PICAMERA_AVAILABLE and platform.system() != "Windows":
+            # picamera2 initialization for Raspberry Pi
+            picam2 = Picamera2()
+            config = picam2.create_preview_configuration(main={"size": (640, 480)})
+            picam2.configure(config)
+            picam2.start()
+            print("INFO: picamera2 started.")
+            
+            # CV-Thread initialization and start
+            cvt = CVThread()
+            cvt.start()
 
-        # CV-Thread initialisieren und starten
-        cvt = CVThread()
-        cvt.start()
+            while True:
+                # Capture image as NumPy array
+                img = picam2.capture_array()
 
-        while True:
-            # Ein Bild als NumPy-Array aufnehmen
-            img = picam2.capture_array()
+                if Camera.modeSelect == 'none':
+                    cvt.pause()
+                    robot.buzzerCtrl(0, 0)
+                else:
+                    if not cvt.CVThreading:
+                        cvt.mode(Camera.modeSelect, img)
+                        cvt.resume()
+                    try:
+                        img = cvt.elementDraw(img)
+                    except Exception as e:
+                        print(f"Error in elementDraw: {e}")
+                        pass
 
-            if Camera.modeSelect == 'none':
-                cvt.pause()
-                robot.buzzerCtrl(0, 0)
-            else:
-                if not cvt.CVThreading:
-                    cvt.mode(Camera.modeSelect, img)
-                    cvt.resume()
+                # Encode image as JPEG and output
                 try:
-                    img = cvt.elementDraw(img)
+                    yield cv2.imencode('.jpg', img)[1].tobytes()
                 except Exception as e:
-                    print(f"Error in elementDraw: {e}")
+                    print(f"Error encoding frame: {e}")
                     pass
-
-            # Bild als JPEG kodieren und ausgeben
+        else:
+            # OpenCV camera fallback for Windows/development
+            camera = cv2.VideoCapture(Camera.video_source)
+            if not camera.isOpened():
+                print("Warning: Could not open camera, using dummy frames")
+                # Generate dummy frames for testing
+                while True:
+                    dummy_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                    cv2.putText(dummy_frame, "No Camera Available", (150, 240), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                    yield cv2.imencode('.jpg', dummy_frame)[1].tobytes()
+                    time.sleep(0.1)
+            
+            # CV-Thread initialization and start
+            cvt = CVThread()
+            cvt.start()
+            
             try:
-                yield cv2.imencode('.jpg', img)[1].tobytes()
-            except Exception as e:
-                print(f"Error encoding frame: {e}")
-                pass
-    # ############ ENDE NEUE METHODE ################
+                while True:
+                    # Read frame from camera
+                    success, img = camera.read()
+                    if not success:
+                        break
+                    else:
+                        # Resize to match expected dimensions
+                        img = cv2.resize(img, (640, 480))
+                        
+                        if Camera.modeSelect == 'none':
+                            cvt.pause()
+                            robot.buzzerCtrl(0, 0)
+                        else:
+                            if not cvt.CVThreading:
+                                cvt.mode(Camera.modeSelect, img)
+                                cvt.resume()
+                            try:
+                                img = cvt.elementDraw(img)
+                            except Exception as e:
+                                print(f"Error in elementDraw: {e}")
+                                pass
+
+                        # Encode image as JPEG and output
+                        try:
+                            yield cv2.imencode('.jpg', img)[1].tobytes()
+                        except Exception as e:
+                            print(f"Error encoding frame: {e}")
+                            pass
+            finally:
+                camera.release()
+    # ############ END CAMERA METHOD ################
 
 
 # ... (der Rest der Datei bleibt unverÃ¤ndert) ...
