@@ -37,7 +37,7 @@ After rebooting, clone this repository and run the installation script.
 ```bash
 # Clone the repository
 git clone https://github.com/Devilwitha/robo.git
-cd WAVEGO
+cd robo
 
 # Make the installation script executable
 chmod +x install.sh
