@@ -176,12 +176,10 @@ class CVThread(threading.Thread):
         elif self.CVMode == 'watchDog':
             if self.drawing:
                 cv2.putText(imgInput,'Motion Detected',(40,60), CVThread.font, 0.5,(255,255,255),1,cv2.LINE_AA)
-                robot.buzzerCtrl(1, 0)
                 robot.lightCtrl('red', 0)
                 cv2.rectangle(imgInput, (self.mov_x, self.mov_y), (self.mov_x + self.mov_w, self.mov_y + self.mov_h), (128, 255, 0), 1)
             else:
                 cv2.putText(imgInput,'Motion Detecting',(40,60), CVThread.font, 0.5,(255,255,255),1,cv2.LINE_AA)
-                robot.buzzerCtrl(0, 0)
                 robot.lightCtrl('blue', 0)
 
         return imgInput
@@ -226,7 +224,6 @@ class CVThread(threading.Thread):
 
         if (timestamp - self.lastMovtionCaptured).seconds >= 0.5:
             self.drawing = 0
-            robot.buzzerCtrl(0, 0)
 
         self.pause()
 
@@ -345,10 +342,8 @@ class CVThread(threading.Thread):
                 X_LOCK = 1
 
             if X_LOCK == 1 and Y_LOCK == 1:
-                robot.buzzerCtrl(1, 0)
                 robot.lightCtrl('red', 0)
             else:
-                robot.buzzerCtrl(0, 0)
                 robot.lightCtrl('blue', 0)
 
         else:
@@ -366,10 +361,8 @@ class CVThread(threading.Thread):
             )
         if len(self.faces):
             robot.lightCtrl('red', 0)
-            robot.buzzerCtrl(1, 0)
         else:
             robot.lightCtrl('blue', 0)
-            robot.buzzerCtrl(0, 0)
         self.pause()
 
 
@@ -382,16 +375,14 @@ class CVThread(threading.Thread):
     def run(self):
         while 1:
             if self.CVMode == 'none':
-                robot.buzzerCtrl(0, 0)
+                pass
 
             self.__flag.wait()
             if self.CVMode == 'none':
                 robot.stopLR()
                 robot.stopFB()
-                robot.buzzerCtrl(0, 0)
                 robot.lightCtrl('blue', 0)
                 self.pause()
-                robot.buzzerCtrl(0, 0)
                 continue
 
             elif self.CVMode == 'findColor':
@@ -517,7 +508,6 @@ class Camera(BaseCamera):
 
                 if Camera.modeSelect == 'none':
                     cvt.pause()
-                    robot.buzzerCtrl(0, 0)
                 else:
                     if not cvt.CVThreading:
                         cvt.mode(Camera.modeSelect, img)
@@ -563,7 +553,6 @@ class Camera(BaseCamera):
                         
                         if Camera.modeSelect == 'none':
                             cvt.pause()
-                            robot.buzzerCtrl(0, 0)
                         else:
                             if not cvt.CVThreading:
                                 cvt.mode(Camera.modeSelect, img)
@@ -633,7 +622,6 @@ def commandAct(act, inputA):
         Camera.modeSelect = 'faceDetection'
     elif act == 'faceDetectionOff':
         Camera.modeSelect = 'none'
-        robot.buzzerCtrl(0, 0)
     elif 'trackLine' == act:
         Camera.modeSelect = 'findlineCV'
         Camera.CVMode = 'run'
@@ -643,4 +631,3 @@ def commandAct(act, inputA):
         robot.stopLR()
         time.sleep(0.05)
         robot.stopFB()
-        robot.buzzerCtrl(0, 0)
