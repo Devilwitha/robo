@@ -24,7 +24,8 @@ echo "--> System packages installed."
 
 # --- Step 2: Set Up Python Virtual Environment ---
 echo "--> Creating Python virtual environment..."
-cd "$(dirname "$0")/RPi"
+# Create venv in project root (not in RPi subdirectory)
+cd "$(dirname "$0")"
 python3 -m venv --system-site-packages venv
 echo "--> Virtual environment created."
 
@@ -38,7 +39,8 @@ echo "--> Python packages installed."
 
 # --- Step 4: Set up and Enable the systemd Service ---
 echo "--> Setting up the systemd service for auto-start..."
-sudo cp wavego.service /etc/systemd/system/wavego.service
+# Copy the corrected service file from RPi directory
+sudo cp RPi/wavego.service /etc/systemd/system/wavego.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now wavego.service
 echo "--> systemd service enabled and started."
