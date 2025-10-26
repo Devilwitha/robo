@@ -5,8 +5,8 @@ After=network.target network-online.target
 
 [Service]
 ExecStartPre=/bin/sleep 10
-ExecStart=/home/devil/WAVEGO/RPi/venv/bin/python /home/devil/WAVEGO/RPi/webServer.py
-WorkingDirectory=/home/devil/WAVEGO/RPi
+ExecStart=/usr/bin/python3 /home/devil/robo/RPi/webServer.py
+WorkingDirectory=/home/devil/robo/RPi
 StandardOutput=inherit
 StandardError=inherit
 Restart=always
