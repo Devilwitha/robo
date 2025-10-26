@@ -5,12 +5,14 @@ After=network.target network-online.target
 
 [Service]
 ExecStartPre=/bin/sleep 10
+
 ExecStart=/usr/bin/python3 /home/devil/robo/RPi/webServer.py
 WorkingDirectory=/home/devil/robo/RPi
+
 StandardOutput=inherit
 StandardError=inherit
 Restart=always
-User=root
+User=pi
 
 [Install]
 WantedBy=multi-user.target

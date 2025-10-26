@@ -9,7 +9,13 @@ if [ "$EUID" -eq 0 ]; then
   exit 1
 fi
 
+# Get current user and installation path
+CURRENT_USER=$(whoami)
+INSTALL_PATH=$(pwd)
+
 echo "--- Starting WAVEGO Setup ---"
+echo "Installing for user: $CURRENT_USER"
+echo "Installation path: $INSTALL_PATH"
 
 # --- Step 1: Install System Dependencies ---
 echo "--> Installing required system packages with apt..."
@@ -24,7 +30,8 @@ echo "--> System packages installed."
 
 # --- Step 2: Set Up Python Virtual Environment ---
 echo "--> Creating Python virtual environment..."
-cd "$(dirname "$0")/RPi"
+# Create venv in project root (not in RPi subdirectory)
+cd "$(dirname "$0")"
 python3 -m venv --system-site-packages venv
 echo "--> Virtual environment created."
 
@@ -38,7 +45,26 @@ echo "--> Python packages installed."
 
 # --- Step 4: Set up and Enable the systemd Service ---
 echo "--> Setting up the systemd service for auto-start..."
-sudo cp wavego.service /etc/systemd/system/wavego.service
+
+# Create service file with correct paths
+sudo tee /etc/systemd/system/wavego.service > /dev/null << EOF
+[Unit]
+Description=WAVEGO Web Server
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+ExecStartPre=/bin/sleep 10
+ExecStart=$INSTALL_PATH/venv/bin/python $INSTALL_PATH/RPi/webServer.py
+WorkingDirectory=$INSTALL_PATH/RPi
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=$CURRENT_USER
+
+[Install]
+WantedBy=multi-user.target
+EOF
 sudo systemctl daemon-reload
 sudo systemctl enable --now wavego.service
 echo "--> systemd service enabled and started."

@@ -37,7 +37,7 @@ After rebooting, clone this repository and run the installation script.
 ```bash
 # Clone the repository
 git clone https://github.com/Devilwitha/robo.git
-cd WAVEGO
+cd robo
 
 # Make the installation script executable
 chmod +x install.sh
@@ -96,3 +96,74 @@ The robot's software runs as a background service called `wavego.service`. You c
     ```bash
     sudo journalctl -u wavego.service -f
     ```
+
+## Remote Control with a Joystick (Optional)
+
+In addition to the web interface, you can control the WAVEGO robot using a joystick or racing wheel (e.g., a Thrustmaster T248) connected to a separate Raspberry Pi.
+
+### Setup Overview
+
+*   **Robot Pi**: The main Raspberry Pi on the WAVEGO robot, running the `wavego.service`.
+*   **Client Pi**: A separate Raspberry Pi connected to your joystick via USB. This Pi runs the `RPi/client.py` script.
+
+The Client Pi reads joystick inputs and sends them over the network to the Robot Pi.
+
+### Step 1: Client Pi Installation
+
+On your second Raspberry Pi (the client), perform the following steps.
+
+1.  **Install System Dependencies**:
+    `pygame` requires some system libraries. Open a terminal and run:
+    ```bash
+    sudo apt-get update
+    sudo apt-get install -y python3-pip python3-venv libsdl2-dev
+    ```
+
+2.  **Clone the Repository**:
+    You need the client scripts on this Pi as well.
+    ```bash
+    git clone https://github.com/Devilwitha/robo.git
+    cd robo/RPi
+    ```
+
+3.  **Set Up Python Environment**:
+    Create a virtual environment to keep the dependencies clean.
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+    Your terminal prompt should now start with `(venv)`.
+
+4.  **Install Python Packages**:
+    Install `pygame` for joystick support and `websockets` for network communication.
+    ```bash
+    pip install pygame websockets
+    ```
+
+### Step 2: Configure Your Controller
+
+Every controller has a different layout. You need to find the correct axis and button numbers for your model.
+
+1.  **Connect the Controller**: Plug your joystick or controller into a USB port on the Client Pi.
+
+2.  **Run the Checker Script**: Make sure your virtual environment is active (`source venv/bin/activate`) and run the helper script:
+    ```bash
+    python check_joystick.py
+    ```
+
+3.  **Identify Your Axes**: The script will print the real-time status of all axes.
+    *   Move the steering control left and right and note which `Axis X` number changes. This is your `STEERING_AXIS`.
+    *   Move the accelerator/brake controls and note which `Axis Y/Z` numbers change. These are your `ACCELERATOR_AXIS` and `BRAKE_AXIS`.
+
+4.  **Edit `client.py`**: Open the main client script for editing (`nano RPi/client.py`) and find the "Joystick Axis Configuration" section. Replace the placeholder numbers with the correct axis numbers you found.
+
+### Step 3: Run the Client
+
+1.  **Ensure the Robot is On**: Your WAVEGO robot and its Raspberry Pi must be powered on and the `wavego.service` must be running.
+
+2.  **Start the Client**: On your Client Pi (with the venv active), run the main client script:
+    ```bash
+    python client.py
+    ```
+
+The script will attempt to connect to the robot. If successful, you can now control the WAVEGO robot using your joystick. To stop the client, press `Ctrl+C`.

@@ -4,11 +4,13 @@
 import time
 import json
 import serial
+
 import os
 import sys
 
 # Global variables
 ser = None
+
 dataCMD = json.dumps({'var':"", 'val':0, 'ip':""})
 upperGlobalIP = 'UPPER IP'
 

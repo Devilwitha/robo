@@ -13,13 +13,13 @@ import asyncio
 import websockets
 import app
 
-# Globale Variable für die Flask-App und IP
+# Globale Variable fÃ¼r die Flask-App und IP
 flask_app = None
 ipaddr_check = "192.168.4.1"
 
 
 def ap_thread():
-    # Dieser Befehl startet einen Access Point. Er benötigt Root-Rechte.
+    # Dieser Befehl startet einen Access Point. Er benÃ¶tigt Root-Rechte.
     os.system("sudo create_ap wlan0 eth0 WAVE_BOT 12345678")
 
 
@@ -53,6 +53,7 @@ async def check_permit(websocket):
 
 async def recv_msg(websocket):
     # Hauptschleife zum Empfangen von Steuerbefehlen
+
     try:
         while True:
             response = {
@@ -137,11 +138,18 @@ async def main_logic(websocket, path=None):
     # permit = await check_permit(websocket)
     # if permit:
     #     await recv_msg(websocket)
+
     await recv_msg(websocket)
 
 
+# ###############################################################
+# ############### KORRIGIERTER START-BLOCK ######################
+# ###############################################################
+
+# Definiert eine moderne asynchrone Hauptfunktion fÃ¼r den WebSocket-Server
 async def main_async_server():
     # 'async with' startet den Server und stellt sicher, dass er sauber beendet wird
+
     try:
         async with websockets.serve(main_logic, "0.0.0.0", 8888):
             print("INFO: WebSocket-Server erfolgreich auf Port 8888 gestartet.")
@@ -159,6 +167,7 @@ async def main_async_server():
         except Exception as e2:
             print(f"FATALER FEHLER: WebSocket-Server konnte nicht gestartet werden: {e2}")
 
+
 if __name__ == '__main__':
     # Initialisiert die Flask-App aus app.py
     wifi_check()
@@ -170,8 +179,8 @@ if __name__ == '__main__':
 
     # Dies ist der neue, korrekte Weg, den asynchronen WebSocket-Server zu starten
     try:
-        print("INFO: Starte asyncio event loop für den WebSocket-Server...")
-        # asyncio.run() kümmert sich um die "event loop" und behebt den "no running event loop"-Fehler
+        print("INFO: Starte asyncio event loop fÃ¼r den WebSocket-Server...")
+        # asyncio.run() kÃ¼mmert sich um die "event loop" und behebt den "no running event loop"-Fehler
         asyncio.run(main_async_server())
     except KeyboardInterrupt:
         print("INFO: Server werden heruntergefahren.")
