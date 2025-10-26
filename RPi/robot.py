@@ -6,29 +6,25 @@ import json
 import serial
 import platform
 
-# Try to initialize serial connection, use mock if on Windows or if port not available
+# Try to initialize serial connection.
+# If it fails, the program will exit with an error.
 try:
-    if platform.system() == "Windows":
-        # For Windows development, we'll use a mock serial connection
-        class MockSerial:
-            def write(self, data):
-                print(f"[MOCK SERIAL] Would send: {data.decode()}")
-            def close(self):
-                pass
-        ser = MockSerial()
-        print("Running in Windows development mode - using mock serial connection")
-    else:
-        ser = serial.Serial("/dev/ttyS0", 115200)
-except Exception as e:
-    print(f"Serial connection failed: {e}")
-    # Fallback to mock serial for development
-    class MockSerial:
-        def write(self, data):
-            print(f"[MOCK SERIAL] Would send: {data.decode()}")
-        def close(self):
-            pass
-    ser = MockSerial()
-    print("Using mock serial connection due to connection failure")
+    ser = serial.Serial("/dev/ttyS0", 115200)
+    print("Successfully connected to the serial port /dev/ttyS0.")
+except serial.SerialException as e:
+    print("------------------------------------------------------------")
+    print(f"FATAL ERROR: Failed to open serial port /dev/ttyS0: {e}")
+    print("This is the hardware interface for the robot.")
+    print("\nTroubleshooting steps:")
+    print("1. Ensure the robot's hardware is correctly connected.")
+    print("2. In `sudo raspi-config`, under 'Interface Options' -> 'Serial Port':")
+    print("   - Ensure the login shell over serial is DISABLED.")
+    print("   - Ensure the serial port hardware is ENABLED.")
+    print("3. Check for other processes that might be using the port.")
+    print("\nExiting program. The robot cannot be controlled.")
+    print("------------------------------------------------------------")
+    # Exit the program because the robot is unusable without the serial connection.
+    exit()
 dataCMD = json.dumps({'var':"", 'val':0, 'ip':""})
 upperGlobalIP = 'UPPER IP'
 
