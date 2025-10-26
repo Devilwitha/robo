@@ -5,8 +5,10 @@ After=network.target network-online.target
 
 [Service]
 ExecStartPre=/bin/sleep 10
-ExecStart=/home/pi/robo/venv/bin/python /home/pi/robo/RPi/webServer.py
-WorkingDirectory=/home/pi/robo/RPi
+
+ExecStart=/usr/bin/python3 /home/devil/robo/RPi/webServer.py
+WorkingDirectory=/home/devil/robo/RPi
+
 StandardOutput=inherit
 StandardError=inherit
 Restart=always
